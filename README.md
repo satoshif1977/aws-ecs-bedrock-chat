@@ -33,9 +33,14 @@ URL に自動で `?session_id=xxxx` が付与され、**ブラウザをリロー
 
 ![App Demo Phase6](docs/screenshots/app-demo-phase6.png)
 
+**Phase 7: ストリーミングレスポンス** — 文字がリアルタイムで流れます（右上の Stop ボタンで中断可）。
+
+![App Demo Phase7 Streaming](docs/screenshots/app-demo-phase7-streaming.png)
+
 | 機能 | 説明 |
 |---|---|
 | チャット | Claude Haiku 4.5 に自然言語で質問できる |
+| ストリーミング表示 | 回答が1文字ずつリアルタイムで流れる（`invoke_model_with_response_stream`） |
 | 履歴永続化 | リロード後も DynamoDB から会話履歴を自動復元 |
 | 会話リセット | サイドバーのボタンで DynamoDB の履歴ごとクリア |
 
@@ -160,6 +165,7 @@ terraform destroy
   - on-demand throughput 非対応モデルは推論プロファイル ARN + 基盤モデル ARN の両方を IAM で許可する必要がある
 - **NAT Gateway なし**のパブリックサブネット構成で学習コストを最小化（`assign_public_ip = true`）
 - ECS Service に `lifecycle { ignore_changes = [task_definition] }` を設定し、CI/CD デプロイ時の差分を抑制
+- **ストリーミング API**（`invoke_model_with_response_stream`）で回答をリアルタイム表示。`InvokeModel` と `InvokeModelWithResponseStream` は**別々の IAM アクション**のため両方許可が必要
 - **ECS はステートレス**なため、会話履歴は DynamoDB に外出し。リロード・再起動後も履歴が保持される
 - **URL クエリパラメータ**（`?session_id=xxxx`）で session_id を永続化し、Streamlit のセッション管理と組み合わせた
 - DynamoDB の **TTL 設定**で 7 日後に古いセッションを自動削除し、運用コストを抑制
