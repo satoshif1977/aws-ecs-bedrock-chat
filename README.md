@@ -187,6 +187,101 @@ terraform destroy
 
 ---
 
+## CI/CD パイプライン（Phase 8）
+
+`master` ブランチへの push で自動デプロイが実行されます。
+
+```
+git push → GitHub Actions
+  → Docker build
+  → ECR push（コミット SHA タグ + latest）
+  → ECS force-new-deployment
+  → services-stable まで待機
+```
+
+### OIDC 認証の仕組み
+
+AWS アクセスキーを GitHub に保存せず、**OIDC（OpenID Connect）** で一時トークンを発行します。
+
+```
+GitHub Actions 起動
+  → GitHub が OIDC トークンを発行
+  → AWS STS が検証・IAM Role を一時 AssumeRole
+  → 一時クレデンシャルで ECR/ECS を操作
+  → 処理完了後にトークンが自動失効
+```
+
+### GitHub Repository Variables の設定
+
+| 変数名 | 値 | 説明 |
+|---|---|---|
+| `AWS_ROLE_ARN` | `arn:aws:iam::<account_id>:role/...-github-actions-role` | `terraform output github_actions_role_arn` で確認 |
+
+---
+
+## セキュリティ設計
+
+### OIDC Trust Policy（最小権限）
+
+```hcl
+# リポジトリ × ブランチの完全一致で絞り込み（StringEquals）
+# StringLike（ワイルドカード可）は使用しない
+Condition = {
+  StringEquals = {
+    "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
+    "token.actions.githubusercontent.com:sub" = "repo:<owner>/<repo>:ref:refs/heads/master"
+  }
+}
+```
+
+| 設定 | 理由 |
+|---|---|
+| `StringEquals` で完全一致 | `StringLike` はワイルドカードが効くため使用しない |
+| `ref:refs/heads/master` 限定 | PR・feature ブランチからの AssumeRole を防止 |
+| `aud: sts.amazonaws.com` | GitHub OIDC トークンの正規用途を限定 |
+
+### IAM 最小権限（GitHub Actions Role）
+
+| 権限 | 対象リソース | 理由 |
+|---|---|---|
+| `ecr:GetAuthorizationToken` | `*`（API仕様上不可避） | ECR ログインに必要 |
+| `ecr:PutImage` 他 push 系 | 特定リポジトリ ARN のみ | 他リポジトリへの push を防止 |
+| `ecs:UpdateService` | 特定サービス ARN のみ | 他サービスへの操作を防止 |
+| `ecs:DescribeServices` | 特定サービス ARN のみ | `wait services-stable` に必要 |
+| `iam:PassRole` | **付与しない** | `force-new-deployment` は不要 |
+
+### GitHub Actions 権限設定
+
+```yaml
+permissions:
+  id-token: write  # OIDC トークン取得（必要最小限）
+  contents: read   # コード読み取りのみ
+```
+
+- **secrets にアクセスキーを保存しない**（OIDC のみで認証）
+- `push: branches: master` のみトリガー（fork/PR 起点では実行されない）
+
+### 検証環境における妥協点と対策
+
+| 項目 | 検証環境の現状 | 本番で追加すべき対策 |
+|---|---|---|
+| Action pinning | `@v4` タグ固定 | `@sha256:...` で SHA 固定 |
+| state 管理 | ローカル state | S3 + DynamoDB バックエンド |
+| 手動承認 | なし | GitHub Environment + Required reviewers |
+| Branch Protection | なし | force push 禁止 + PR required |
+| 監査ログ | GitHub Actions ログのみ | AWS CloudTrail 有効化 |
+
+### `terraform destroy` 時の注意
+
+`aws_iam_openid_connect_provider`（GitHub OIDC Provider）は**アカウントグローバルリソース**です。同一アカウントで他プロジェクトが GitHub OIDC を使用している場合、`destroy` で削除されると影響を受けます。
+
+```bash
+# destroy 前に他リソースへの影響を確認
+terraform plan -destroy
+```
+
+---
+
 ## 関連リポジトリ
 
 - [aws-bedrock-agent](https://github.com/satoshif1977/aws-bedrock-agent) - Bedrock Agent + Lambda FAQ ボット

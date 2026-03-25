@@ -16,6 +16,11 @@ provider "aws" {
 # ── アカウント情報 ─────────────────────────────────────────
 data "aws_caller_identity" "current" {}
 
+# ── ECR リポジトリ情報（CI/CD モジュールに ARN を渡すために取得）
+data "aws_ecr_repository" "app" {
+  name = var.ecr_repository_name
+}
+
 # ── 共通タグ ───────────────────────────────────────────────
 locals {
   tags = {
@@ -76,6 +81,20 @@ module "iam" {
   region              = var.aws_region
   account_id          = data.aws_caller_identity.current.account_id
   dynamodb_table_arn  = module.dynamodb.table_arn
+  tags                = local.tags
+}
+
+# ── CI/CD モジュール ───────────────────────────────────────
+# GitHub Actions 用 OIDC Provider + IAM Role を作成
+# アクセスキー不要で GitHub から安全に AWS 操作できる
+module "cicd" {
+  source              = "../../modules/cicd"
+  project             = var.project
+  env                 = var.env
+  region              = var.aws_region
+  account_id          = data.aws_caller_identity.current.account_id
+  github_repo         = var.github_repo
+  ecr_repository_arn  = data.aws_ecr_repository.app.arn
   tags                = local.tags
 }
 

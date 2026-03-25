@@ -47,3 +47,14 @@ variable "desired_count" {
   type        = number
   default     = 1
 }
+
+variable "ecr_repository_name" {
+  description = "ECR リポジトリ名（ARN 取得用）"
+  type        = string
+  default     = "bedrock-chat"
+}
+
+variable "github_repo" {
+  description = "GitHub リポジトリ（owner/repo 形式）"
+  type        = string
+}

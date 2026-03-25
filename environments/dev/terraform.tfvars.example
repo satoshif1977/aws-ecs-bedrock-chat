@@ -17,3 +17,6 @@ log_retention_days = 7
 
 # ECS Service: 起動タスク数（検証時は 1 で最小コスト）
 desired_count = 1
+
+# GitHub Actions CI/CD（owner/repo 形式）
+github_repo = "<YOUR_GITHUB_USERNAME>/aws-ecs-bedrock-chat"

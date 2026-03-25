@@ -22,3 +22,8 @@ output "log_group_name" {
   description = "CloudWatch Log Group 名"
   value       = module.ecs.log_group_name
 }
+
+output "github_actions_role_arn" {
+  description = "GitHub Actions 用 IAM Role ARN（GitHub Variables: AWS_ROLE_ARN に設定する）"
+  value       = module.cicd.github_actions_role_arn
+}
