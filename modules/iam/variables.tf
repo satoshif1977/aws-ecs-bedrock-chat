@@ -18,6 +18,11 @@ variable "account_id" {
   type        = string
 }
 
+variable "dynamodb_table_arn" {
+  description = "DynamoDB テーブル ARN（Task Role に GetItem / PutItem を付与）"
+  type        = string
+}
+
 variable "tags" {
   description = "共通タグ"
   type        = map(string)

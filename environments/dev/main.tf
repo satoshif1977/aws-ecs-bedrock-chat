@@ -58,15 +58,25 @@ module "alb" {
   tags                  = local.tags
 }
 
+# ── DynamoDB モジュール ────────────────────────────────────
+# チャット会話履歴の永続化ストア（PAY_PER_REQUEST / TTL 7日）
+module "dynamodb" {
+  source  = "../../modules/dynamodb"
+  project = var.project
+  env     = var.env
+  tags    = local.tags
+}
+
 # ── IAM モジュール ─────────────────────────────────────────
 # Task Execution Role / Task Role を作成
 module "iam" {
-  source     = "../../modules/iam"
-  project    = var.project
-  env        = var.env
-  region     = var.aws_region
-  account_id = data.aws_caller_identity.current.account_id
-  tags       = local.tags
+  source              = "../../modules/iam"
+  project             = var.project
+  env                 = var.env
+  region              = var.aws_region
+  account_id          = data.aws_caller_identity.current.account_id
+  dynamodb_table_arn  = module.dynamodb.table_arn
+  tags                = local.tags
 }
 
 # ── ECS モジュール ─────────────────────────────────────────
@@ -87,5 +97,6 @@ module "ecs" {
   subnet_ids                 = module.vpc.public_subnet_ids
   ecs_task_security_group_id = module.sg.ecs_task_security_group_id
   alb_target_group_arn       = module.alb.target_group_arn
+  dynamodb_table_name        = module.dynamodb.table_name
   tags                       = local.tags
 }

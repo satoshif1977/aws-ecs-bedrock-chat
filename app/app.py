@@ -1,4 +1,8 @@
 import json
+import os
+import time
+import uuid
+
 import boto3
 import streamlit as st
 
@@ -10,33 +14,83 @@ st.set_page_config(
 )
 
 # ── 定数 ─────────────────────────────────────────────────
-MODEL_ID = "jp.anthropic.claude-haiku-4-5-20251001-v1:0"
-REGION   = "ap-northeast-1"
-MAX_TOKENS = 1024
+MODEL_ID         = "jp.anthropic.claude-haiku-4-5-20251001-v1:0"
+REGION           = "ap-northeast-1"
+MAX_TOKENS       = 1024
+HISTORY_TTL_DAYS = 7
+TABLE_NAME       = os.environ.get("DYNAMODB_TABLE_NAME", "")
 
-# ── Bedrock クライアント（キャッシュ）────────────────────
+# ── AWS クライアント（キャッシュ）────────────────────────
 @st.cache_resource
 def get_bedrock_client():
     return boto3.client("bedrock-runtime", region_name=REGION)
 
+@st.cache_resource
+def get_dynamodb_client():
+    return boto3.client("dynamodb", region_name=REGION)
+
+# ── DynamoDB: 会話履歴を読み込む ──────────────────────────
+def load_history(session_id: str) -> list[dict]:
+    """DynamoDB からセッションの会話履歴を取得する。"""
+    if not TABLE_NAME:
+        return []
+    try:
+        response = get_dynamodb_client().get_item(
+            TableName=TABLE_NAME,
+            Key={"session_id": {"S": session_id}},
+        )
+        if "Item" in response:
+            return json.loads(response["Item"]["messages"]["S"])
+    except Exception:
+        pass
+    return []
+
+# ── DynamoDB: 会話履歴を保存する ──────────────────────────
+def save_history(session_id: str, messages: list[dict]) -> None:
+    """DynamoDB にセッションの会話履歴を保存する（TTL: 7日）。"""
+    if not TABLE_NAME:
+        return
+    try:
+        ttl = int(time.time()) + 60 * 60 * 24 * HISTORY_TTL_DAYS
+        get_dynamodb_client().put_item(
+            TableName=TABLE_NAME,
+            Item={
+                "session_id": {"S": session_id},
+                "messages":   {"S": json.dumps(messages, ensure_ascii=False)},
+                "ttl":        {"N": str(ttl)},
+            },
+        )
+    except Exception:
+        pass
+
 # ── Bedrock に問い合わせる ────────────────────────────────
 def invoke_bedrock(messages: list[dict]) -> str:
-    client = get_bedrock_client()
     body = {
         "anthropic_version": "bedrock-2023-05-31",
         "max_tokens": MAX_TOKENS,
         "messages": messages,
     }
-    response = client.invoke_model(
+    response = get_bedrock_client().invoke_model(
         modelId=MODEL_ID,
         body=json.dumps(body),
     )
     result = json.loads(response["body"].read())
     return result["content"][0]["text"]
 
-# ── セッション初期化 ──────────────────────────────────────
+# ── セッション ID 管理（URL クエリパラメータで永続化）────
+# ブラウザをリロードしても同じ session_id が URL に残るため
+# DynamoDB から過去の会話を復元できる
+if "session_id" not in st.session_state:
+    params = st.query_params
+    if "session_id" in params:
+        st.session_state.session_id = params["session_id"]
+    else:
+        st.session_state.session_id = str(uuid.uuid4())
+        st.query_params["session_id"] = st.session_state.session_id
+
+# ── 初回ロード時に DynamoDB から履歴を復元 ───────────────
 if "messages" not in st.session_state:
-    st.session_state.messages = []
+    st.session_state.messages = load_history(st.session_state.session_id)
 
 # ── サイドバー ────────────────────────────────────────────
 with st.sidebar:
@@ -46,9 +100,10 @@ with st.sidebar:
     st.divider()
     if st.button("🗑️ 会話をリセット", use_container_width=True):
         st.session_state.messages = []
+        save_history(st.session_state.session_id, [])
         st.rerun()
     st.divider()
-    st.caption("aws-ecs-bedrock-chat / Phase 1")
+    st.caption("aws-ecs-bedrock-chat / Phase 6")
 
 # ── メイン画面 ────────────────────────────────────────────
 st.title("🤖 Bedrock Chat")
@@ -61,18 +116,17 @@ for msg in st.session_state.messages:
 
 # ユーザー入力
 if prompt := st.chat_input("メッセージを入力してください"):
-    # ユーザーメッセージを追加・表示
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.write(prompt)
 
-    # Bedrock に問い合わせ
     with st.chat_message("assistant"):
         with st.spinner("考え中..."):
             try:
                 reply = invoke_bedrock(st.session_state.messages)
                 st.write(reply)
                 st.session_state.messages.append({"role": "assistant", "content": reply})
+                save_history(st.session_state.session_id, st.session_state.messages)
             except Exception as e:
                 st.error(f"エラーが発生しました: {e}")
                 st.stop()

@@ -52,6 +52,13 @@ variable "log_retention_days" {
   default     = 7
 }
 
+# ── Phase 6 追加変数（DynamoDB 連携）──────────────────────
+
+variable "dynamodb_table_name" {
+  description = "DynamoDB テーブル名（コンテナの環境変数 DYNAMODB_TABLE_NAME に渡す）"
+  type        = string
+}
+
 # ── Phase 5 追加変数（ECS Service 用）──────────────────────
 
 variable "desired_count" {

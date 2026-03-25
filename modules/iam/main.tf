@@ -42,6 +42,25 @@ resource "aws_iam_role" "task" {
   tags = var.tags
 }
 
+# DynamoDB 会話履歴への読み書き権限（Phase 6 追加）
+# GetItem / PutItem のみ許可（最小権限）
+resource "aws_iam_role_policy" "task_dynamodb" {
+  name = "${var.project}-${var.env}-task-dynamodb-policy"
+  role = aws_iam_role.task.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "dynamodb:GetItem",
+        "dynamodb:PutItem",
+      ]
+      Resource = [var.dynamodb_table_arn]
+    }]
+  })
+}
+
 # Bedrock InvokeModel 権限（Claude Haiku 4.5 クロスリージョン推論プロファイル）
 # クロスリージョン推論では 2つの Resource ARN が必要:
 #   1. 推論プロファイル ARN（jp.* プレフィックス、アカウント ID 付き）
