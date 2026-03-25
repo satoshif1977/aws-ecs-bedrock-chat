@@ -14,6 +14,7 @@ Streamlit Web UI を Docker コンテナ化し、ALB 経由でインターネッ
 | **ALB** | Internet-facing / HTTP:80 / Multi-AZ（1a・1c） |
 | **ECS Fargate** | 0.25 vCPU / 0.5 GB / Streamlit Port 8501 |
 | **Amazon Bedrock** | Claude Haiku 4.5（jp 推論プロファイル経由） |
+| **Amazon DynamoDB** | 会話履歴の永続化（PAY_PER_REQUEST / TTL: 7日） |
 | **Amazon ECR** | コンテナイメージ管理（bedrock-chat:latest） |
 | **CloudWatch Logs** | ECS タスクログ（7日保持） |
 | **IAM** | Task Execution Role / Task Role（最小権限） |
@@ -24,8 +25,19 @@ Streamlit Web UI を Docker コンテナ化し、ALB 経由でインターネッ
 ## デモ
 
 ALB の DNS 名でブラウザからアクセスし、Claude Haiku 4.5 とチャットできます。
+URL に自動で `?session_id=xxxx` が付与され、**ブラウザをリロードしても会話履歴が DynamoDB から復元**されます。
 
-![App Demo](docs/screenshots/app-demo.png)
+![App Demo Phase5](docs/screenshots/app-demo.png)
+
+**Phase 6: DynamoDB 会話履歴連携** — URL に `?session_id=xxxx` が付与され、リロード後も履歴が復元されます。
+
+![App Demo Phase6](docs/screenshots/app-demo-phase6.png)
+
+| 機能 | 説明 |
+|---|---|
+| チャット | Claude Haiku 4.5 に自然言語で質問できる |
+| 履歴永続化 | リロード後も DynamoDB から会話履歴を自動復元 |
+| 会話リセット | サイドバーのボタンで DynamoDB の履歴ごとクリア |
 
 ---
 
@@ -38,6 +50,7 @@ ALB の DNS 名でブラウザからアクセスし、Claude Haiku 4.5 とチャ
 | オーケストレーション | Amazon ECS / AWS Fargate |
 | ロードバランサー | Application Load Balancer（Multi-AZ） |
 | AI | Amazon Bedrock / Claude Haiku 4.5（クロスリージョン推論プロファイル） |
+| DB | Amazon DynamoDB（会話履歴の永続化） |
 | IaC | Terraform（モジュール構成） |
 | 監視 | Amazon CloudWatch Logs |
 
@@ -63,7 +76,8 @@ aws-ecs-bedrock-chat/
 │   ├── sg/                  # ALB SG / ECS Task SG
 │   ├── alb/                 # ALB / Target Group / Listener
 │   ├── ecs/                 # Cluster / Task Definition / Service
-│   └── iam/                 # Task Execution Role / Task Role
+│   ├── iam/                 # Task Execution Role / Task Role
+│   └── dynamodb/            # 会話履歴テーブル（PAY_PER_REQUEST / TTL）
 └── docs/
     ├── architecture.drawio
     ├── architecture.drawio.png
@@ -135,6 +149,7 @@ terraform destroy
 |---|---|
 | **Task Execution Role** | ECR pull / CloudWatch Logs 書き込み |
 | **Task Role** | `bedrock:InvokeModel`（Claude Haiku 4.5 推論プロファイル + 基盤モデル ARN のみ） |
+| **Task Role** | `dynamodb:GetItem` / `dynamodb:PutItem`（会話履歴テーブルのみ） |
 
 ---
 
@@ -145,6 +160,9 @@ terraform destroy
   - on-demand throughput 非対応モデルは推論プロファイル ARN + 基盤モデル ARN の両方を IAM で許可する必要がある
 - **NAT Gateway なし**のパブリックサブネット構成で学習コストを最小化（`assign_public_ip = true`）
 - ECS Service に `lifecycle { ignore_changes = [task_definition] }` を設定し、CI/CD デプロイ時の差分を抑制
+- **ECS はステートレス**なため、会話履歴は DynamoDB に外出し。リロード・再起動後も履歴が保持される
+- **URL クエリパラメータ**（`?session_id=xxxx`）で session_id を永続化し、Streamlit のセッション管理と組み合わせた
+- DynamoDB の **TTL 設定**で 7 日後に古いセッションを自動削除し、運用コストを抑制
 - `terraform destroy` で全リソースをクリーンアップ可能
 
 ---
@@ -157,6 +175,7 @@ terraform destroy
 | ALB | ~$0.02/時 |
 | CloudWatch Logs | 無料枠内（7日保持・少量） |
 | Bedrock（Claude Haiku 4.5） | ~$0.001/1K tokens |
+| DynamoDB（PAY_PER_REQUEST / 少量書き込み） | ほぼ無料枠内 |
 
 > 検証後は `terraform destroy` でリソース削除を推奨。
 

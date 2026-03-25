@@ -1,6 +1,6 @@
 <mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.6.1 Chrome/142.0.7444.265 Electron/39.8.0 Safari/537.36" version="29.6.1">
   <diagram id="KzHyn37cf3-Kh4Gt0Lm4" name="architecture">
-    <mxGraphModel dx="1443" dy="1091" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+    <mxGraphModel dx="1683" dy="1273" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -11,7 +11,7 @@
           <mxGeometry height="44" width="66" x="160" y="483" as="geometry" />
         </mxCell>
         <mxCell id="aws_cloud" parent="1" style="sketch=0;outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_cloud;strokeColor=#AAB7B8;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#AAB7B8;dashed=0;" value="AWS Cloud (ap-northeast-1)" vertex="1">
-          <mxGeometry height="830" width="1130" x="300" y="163" as="geometry" />
+          <mxGeometry height="930" width="1130" x="300" y="163" as="geometry" />
         </mxCell>
         <mxCell id="vpc" parent="1" style="sketch=0;outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_vpc;strokeColor=#8C4FFF;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#8C4FFF;dashed=0;" value="VPC: 10.0.0.0/16" vertex="1">
           <mxGeometry height="570" width="640" x="330" y="243" as="geometry" />
@@ -37,14 +37,17 @@
         <mxCell id="bedrock" parent="1" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=1;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.bedrock;fillColor=#01A88D;" value="Amazon Bedrock / Claude Haiku 4.5 (jp inference profile)" vertex="1">
           <mxGeometry height="60" width="60" x="1171" y="474" as="geometry" />
         </mxCell>
+        <mxCell id="PK60OziUosnBVfPNBbFh-1" edge="1" parent="1" source="cwlogs" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="dynamodb" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
         <mxCell id="cwlogs" parent="1" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=1;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudwatch;fillColor=#E7157B;" value="CloudWatch Logs / /ecs/ecs-bedrock-chat-dev (7日保持)" vertex="1">
-          <mxGeometry height="60" width="60" x="1171" y="734" as="geometry" />
+          <mxGeometry height="60" width="60" x="1171" y="750" as="geometry" />
         </mxCell>
-        <mxCell id="iam_note" parent="1" style="sketch=0;outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=11;fontStyle=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_note;strokeColor=#DD344C;fillColor=#FDEDEC;verticalAlign=top;align=left;spacingLeft=30;fontColor=#232F3E;dashed=0;" value="IAM (最小権限) Task Execution Role: ECR pull + CloudWatch Logs 書き込み / Task Role: bedrock:InvokeModel (Claude Haiku 4.5 のみ)" vertex="1">
-          <mxGeometry height="100" width="700" x="330" y="863" as="geometry" />
+        <mxCell id="iam_note" parent="1" style="sketch=0;outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=11;fontStyle=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_note;strokeColor=#DD344C;fillColor=#FDEDEC;verticalAlign=top;align=left;spacingLeft=30;fontColor=#232F3E;dashed=0;" value="IAM (最小権限) Task Execution Role: ECR pull + CloudWatch Logs 書き込み / Task Role: bedrock:InvokeModel (Claude Haiku 4.5) + dynamodb:GetItem / PutItem" vertex="1">
+          <mxGeometry height="100" width="700" x="330" y="963" as="geometry" />
         </mxCell>
-        <mxCell id="tf_note" parent="1" style="sketch=0;outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=11;fontStyle=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_note;strokeColor=#AAB7B8;fillColor=#F2F3F4;verticalAlign=top;align=left;spacingLeft=30;fontColor=#232F3E;dashed=0;" value="Terraform IaC - modules: vpc / sg / alb / ecs / iam" vertex="1">
-          <mxGeometry height="100" width="310" x="1052" y="863" as="geometry" />
+        <mxCell id="tf_note" parent="1" style="sketch=0;outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=11;fontStyle=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_note;strokeColor=#AAB7B8;fillColor=#F2F3F4;verticalAlign=top;align=left;spacingLeft=30;fontColor=#232F3E;dashed=0;" value="Terraform IaC - modules: vpc / sg / alb / ecs / iam / dynamodb" vertex="1">
+          <mxGeometry height="100" width="310" x="1052" y="963" as="geometry" />
         </mxCell>
         <mxCell id="e1" edge="1" parent="1" source="user" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeWidth=2;fontSize=10;fontStyle=1;strokeColor=#8C4FFF;fontColor=#8C4FFF;exitX=1.049;exitY=0.434;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.25;entryY=1;entryDx=0;entryDy=0;entryPerimeter=0;" target="alb" value="HTTP:80">
           <mxGeometry relative="1" as="geometry">
@@ -58,14 +61,11 @@
         <mxCell id="e2" edge="1" parent="1" source="alb" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeWidth=2;fontSize=10;fontStyle=1;strokeColor=#8C4FFF;fontColor=#8C4FFF;" target="streamlit" value="Port 8501">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e3" edge="1" parent="1" source="streamlit" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeWidth=2;fontSize=10;fontStyle=1;strokeColor=#01A88D;fontColor=#01A88D;entryX=0.5;entryY=1;entryDx=0;entryDy=0;entryPerimeter=0;" target="bedrock" value="InvokeModel">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="1200" y="624" />
-              <mxPoint x="1200" y="534" />
-            </Array>
-            <mxPoint x="614" y="624.0000000000002" as="sourcePoint" />
-            <mxPoint x="1360" y="534.0000000000002" as="targetPoint" />
+        <mxCell id="e3" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeWidth=2;fontSize=10;fontStyle=1;strokeColor=#01A88D;fontColor=#01A88D;entryX=0.5;entryY=1;entryDx=0;entryDy=0;entryPerimeter=0;" target="bedrock" value="InvokeModel">
+          <mxGeometry relative="1" x="-0.0162" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="667" y="616" as="sourcePoint" />
+            <mxPoint x="1201" y="526" as="targetPoint" />
           </mxGeometry>
         </mxCell>
         <mxCell id="e4" edge="1" parent="1" source="ecr" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeWidth=2;fontSize=10;fontStyle=1;strokeColor=#ED7100;fontColor=#ED7100;dashed=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.75;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" target="streamlit" value="image pull">
@@ -74,14 +74,28 @@
             <mxPoint x="660" y="603" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="e5" edge="1" parent="1" source="streamlit" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeWidth=2;fontSize=10;fontStyle=1;strokeColor=#E7157B;fontColor=#E7157B;dashed=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1;exitY=0.75;exitDx=0;exitDy=0;exitPerimeter=0;" target="cwlogs" value="ログ出力">
-          <mxGeometry relative="1" as="geometry">
+        <mxCell id="e5" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeWidth=2;fontSize=10;fontStyle=1;strokeColor=#E7157B;fontColor=#E7157B;dashed=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" target="cwlogs" value="ログ出力">
+          <mxGeometry relative="1" x="-0.0442" as="geometry">
+            <mxPoint as="offset" />
             <Array as="points">
-              <mxPoint x="1201" y="648" />
+              <mxPoint x="1201" y="650" />
             </Array>
-            <mxPoint x="614" y="645.0000000000002" as="sourcePoint" />
-            <mxPoint x="1360" y="733" as="targetPoint" />
+            <mxPoint x="667" y="650" as="sourcePoint" />
+            <mxPoint x="1201" y="770" as="targetPoint" />
           </mxGeometry>
+        </mxCell>
+        <mxCell id="e6" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeWidth=2;fontSize=10;fontStyle=1;strokeColor=#4051B5;fontColor=#4051B5;" value="GetItem / PutItem">
+          <mxGeometry relative="1" x="0.2024" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="1171" y="634" />
+            </Array>
+            <mxPoint x="667" y="634" as="sourcePoint" />
+            <mxPoint x="1171" y="634" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="dynamodb" parent="1" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=1;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;fillColor=#4051B5;" value="Amazon DynamoDB&#xa;会話履歴（TTL: 7日）" vertex="1">
+          <mxGeometry height="60" width="60" x="1171" y="603" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
