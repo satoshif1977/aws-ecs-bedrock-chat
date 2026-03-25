@@ -63,19 +63,25 @@ def save_history(session_id: str, messages: list[dict]) -> None:
     except Exception:
         pass
 
-# ── Bedrock に問い合わせる ────────────────────────────────
-def invoke_bedrock(messages: list[dict]) -> str:
+# ── Bedrock にストリーミングで問い合わせる ────────────────
+# invoke_model_with_response_stream でチャンクを逐次 yield する
+# st.write_stream() がこのジェネレータを受け取りリアルタイム表示する
+def invoke_bedrock_stream(messages: list[dict]):
     body = {
         "anthropic_version": "bedrock-2023-05-31",
         "max_tokens": MAX_TOKENS,
         "messages": messages,
     }
-    response = get_bedrock_client().invoke_model(
+    response = get_bedrock_client().invoke_model_with_response_stream(
         modelId=MODEL_ID,
         body=json.dumps(body),
     )
-    result = json.loads(response["body"].read())
-    return result["content"][0]["text"]
+    for event in response["body"]:
+        chunk = json.loads(event["chunk"]["bytes"])
+        if chunk.get("type") == "content_block_delta":
+            delta = chunk.get("delta", {})
+            if delta.get("type") == "text_delta":
+                yield delta.get("text", "")
 
 # ── セッション ID 管理（URL クエリパラメータで永続化）────
 # ブラウザをリロードしても同じ session_id が URL に残るため
@@ -103,7 +109,7 @@ with st.sidebar:
         save_history(st.session_state.session_id, [])
         st.rerun()
     st.divider()
-    st.caption("aws-ecs-bedrock-chat / Phase 6")
+    st.caption("aws-ecs-bedrock-chat / Phase 7")
 
 # ── メイン画面 ────────────────────────────────────────────
 st.title("🤖 Bedrock Chat")
@@ -121,12 +127,12 @@ if prompt := st.chat_input("メッセージを入力してください"):
         st.write(prompt)
 
     with st.chat_message("assistant"):
-        with st.spinner("考え中..."):
-            try:
-                reply = invoke_bedrock(st.session_state.messages)
-                st.write(reply)
-                st.session_state.messages.append({"role": "assistant", "content": reply})
-                save_history(st.session_state.session_id, st.session_state.messages)
-            except Exception as e:
-                st.error(f"エラーが発生しました: {e}")
-                st.stop()
+        try:
+            # write_stream() がジェネレータを受け取り文字を逐次表示する
+            # 完了時に全文テキストを返す（DynamoDB 保存に使用）
+            reply = st.write_stream(invoke_bedrock_stream(st.session_state.messages))
+            st.session_state.messages.append({"role": "assistant", "content": reply})
+            save_history(st.session_state.session_id, st.session_state.messages)
+        except Exception as e:
+            st.error(f"エラーが発生しました: {e}")
+            st.stop()
