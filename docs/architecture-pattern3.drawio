@@ -1,0 +1,73 @@
+<mxfile host="Electron" version="29.6.1">
+  <diagram id="pattern3" name="architecture-pattern3">
+    <mxGraphModel dx="1683" dy="1273" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="&lt;font style=&quot;font-size: 23px;&quot;&gt;&lt;b&gt;aws-ecs-bedrock-chat アーキテクチャ構成図（Pattern 3）&lt;/b&gt;&lt;/font&gt;" vertex="1">
+          <mxGeometry height="50" width="1100" x="280" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="user" parent="1" style="shape=mxgraph.networks2.icon;fillColor=#EDEDED;strokeColor=#000000;gradientColor=#5B6163;network2IconShadow=1;network2bgFillColor=none;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;fontColor=#232F3E;fontSize=11;fontStyle=1;html=1;network2Icon=mxgraph.networks2.laptop;network2IconW=1;network2IconH=0.5734;" value="ユーザー" vertex="1">
+          <mxGeometry height="44" width="66" x="50" y="450" as="geometry" />
+        </mxCell>
+        <mxCell id="aws_cloud" parent="1" style="sketch=0;outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_cloud;strokeColor=#AAB7B8;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#AAB7B8;dashed=0;" value="AWS Cloud (ap-northeast-1)" vertex="1">
+          <mxGeometry height="850" width="1470" x="170" y="110" as="geometry" />
+        </mxCell>
+        <mxCell id="alb" parent="1" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=1;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.application_load_balancer;fillColor=#8C4FFF;" value="ALB&#xa;HTTP:80&#xa;(Internet-facing)" vertex="1">
+          <mxGeometry height="60" width="60" x="310" y="442" as="geometry" />
+        </mxCell>
+        <mxCell id="vpc" parent="1" style="sketch=0;outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_vpc;strokeColor=#8C4FFF;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#8C4FFF;dashed=0;" value="VPC: 10.0.0.0/16" vertex="1">
+          <mxGeometry height="620" width="950" x="500" y="170" as="geometry" />
+        </mxCell>
+        <mxCell id="subnet1a" parent="1" style="sketch=0;outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=11;fontStyle=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_public_subnet;strokeColor=#3F8624;fillColor=#F2F6EC;verticalAlign=top;align=left;spacingLeft=30;fontColor=#3F8624;dashed=0;" value="Public Subnet (1a) 10.0.1.0/24" vertex="1">
+          <mxGeometry height="450" width="400" x="530" y="260" as="geometry" />
+        </mxCell>
+        <mxCell id="subnet1c" parent="1" style="sketch=0;outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=11;fontStyle=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_public_subnet;strokeColor=#3F8624;fillColor=#F2F6EC;verticalAlign=top;align=left;spacingLeft=30;fontColor=#3F8624;dashed=0;" value="Public Subnet (1c) 10.0.2.0/24&#xa;(ALB ノード / 冗長)" vertex="1">
+          <mxGeometry height="200" width="400" x="990" y="260" as="geometry" />
+        </mxCell>
+        <mxCell id="ecs_cluster" parent="1" style="sketch=0;outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=11;fontStyle=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_ecs;strokeColor=#ED7100;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#ED7100;dashed=0;" value="ECS Cluster: ecs-bedrock-chat-dev-cluster" vertex="1">
+          <mxGeometry height="200" width="340" x="550" y="440" as="geometry" />
+        </mxCell>
+        <mxCell id="fargate" parent="1" style="sketch=0;outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=10;fontStyle=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_fargate;strokeColor=#ED7100;fillColor=#FEF9F5;verticalAlign=top;align=left;spacingLeft=30;fontColor=#ED7100;dashed=0;" value="Fargate Task (0.25vCPU / 0.5GB)" vertex="1">
+          <mxGeometry height="110" width="300" x="570" y="500" as="geometry" />
+        </mxCell>
+        <mxCell id="streamlit" parent="1" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=1;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecs;fillColor=#ED7100;" value="Streamlit App / Port: 8501" vertex="1">
+          <mxGeometry height="60" width="60" x="690" y="520" as="geometry" />
+        </mxCell>
+        <mxCell id="ecr" parent="1" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=1;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecr;fillColor=#ED7100;" value="Amazon ECR&#xa;bedrock-chat:latest" vertex="1">
+          <mxGeometry height="60" width="60" x="1500" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="bedrock" parent="1" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=1;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.bedrock;fillColor=#01A88D;" value="Amazon Bedrock&#xa;Claude Haiku 4.5&#xa;(jp inference profile)" vertex="1">
+          <mxGeometry height="60" width="60" x="1500" y="440" as="geometry" />
+        </mxCell>
+        <mxCell id="cwlogs" parent="1" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=1;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudwatch;fillColor=#E7157B;" value="CloudWatch Logs&#xa;/ecs/ecs-bedrock-chat-dev&#xa;(7日保持)" vertex="1">
+          <mxGeometry height="60" width="60" x="1500" y="660" as="geometry" />
+        </mxCell>
+        <mxCell id="iam_note" parent="1" style="sketch=0;outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=11;fontStyle=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_note;strokeColor=#DD344C;fillColor=#FDEDEC;verticalAlign=top;align=left;spacingLeft=30;fontColor=#232F3E;dashed=0;" value="IAM (最小権限) Task Execution Role: ECR pull + CloudWatch Logs 書き込み / Task Role: bedrock:InvokeModel (Claude Haiku 4.5 のみ)" vertex="1">
+          <mxGeometry height="90" width="950" x="500" y="840" as="geometry" />
+        </mxCell>
+        <mxCell id="tf_note" parent="1" style="sketch=0;outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=11;fontStyle=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_note;strokeColor=#AAB7B8;fillColor=#F2F3F4;verticalAlign=top;align=left;spacingLeft=30;fontColor=#232F3E;dashed=0;" value="Terraform IaC - modules: vpc / sg / alb / ecs / iam" vertex="1">
+          <mxGeometry height="90" width="400" x="1200" y="840" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" edge="1" parent="1" source="user" target="alb" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeWidth=2;fontSize=10;fontStyle=1;strokeColor=#8C4FFF;fontColor=#8C4FFF;" value="HTTP:80">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_alb_1a" edge="1" parent="1" source="alb" target="subnet1a" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeWidth=2;fontSize=10;fontStyle=1;strokeColor=#8C4FFF;fontColor=#8C4FFF;" value="Port 8501 (1a)">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_alb_1c" edge="1" parent="1" source="alb" target="subnet1c" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeWidth=2;fontSize=10;fontStyle=1;strokeColor=#8C4FFF;fontColor=#8C4FFF;dashed=1;" value="冗長ノード (1c)">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" edge="1" parent="1" source="streamlit" target="bedrock" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeWidth=2;fontSize=10;fontStyle=1;strokeColor=#01A88D;fontColor=#01A88D;" value="InvokeModel">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" edge="1" parent="1" source="ecr" target="streamlit" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeWidth=2;fontSize=10;fontStyle=1;strokeColor=#ED7100;fontColor=#ED7100;dashed=1;" value="image pull">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" edge="1" parent="1" source="streamlit" target="cwlogs" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeWidth=2;fontSize=10;fontStyle=1;strokeColor=#E7157B;fontColor=#E7157B;dashed=1;" value="ログ出力">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
