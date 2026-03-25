@@ -73,7 +73,7 @@ resource "aws_iam_role_policy" "task_bedrock" {
     Version = "2012-10-17"
     Statement = [{
       Effect = "Allow"
-      Action = ["bedrock:InvokeModel"]
+      Action = ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"]
       Resource = [
         "arn:aws:bedrock:${var.region}:${var.account_id}:inference-profile/jp.anthropic.claude-haiku-4-5-20251001-v1:0",
         "arn:aws:bedrock:*::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0"
