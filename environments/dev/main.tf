@@ -84,6 +84,17 @@ module "iam" {
   tags                = local.tags
 }
 
+# ── Knowledge Base モジュール ──────────────────────────────
+# Bedrock Knowledge Base + OpenSearch Serverless + S3（RAG 用ドキュメントストア）
+module "knowledgebase" {
+  source     = "../../modules/knowledgebase"
+  project    = var.project
+  env        = var.env
+  region     = var.aws_region
+  account_id = data.aws_caller_identity.current.account_id
+  tags       = local.tags
+}
+
 # ── CI/CD モジュール ───────────────────────────────────────
 # GitHub Actions 用 OIDC Provider + IAM Role を作成
 # アクセスキー不要で GitHub から安全に AWS 操作できる
@@ -117,5 +128,6 @@ module "ecs" {
   ecs_task_security_group_id = module.sg.ecs_task_security_group_id
   alb_target_group_arn       = module.alb.target_group_arn
   dynamodb_table_name        = module.dynamodb.table_name
+  knowledge_base_id          = module.knowledgebase.knowledge_base_id
   tags                       = local.tags
 }

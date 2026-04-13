@@ -82,6 +82,14 @@ variable "alb_target_group_arn" {
   type        = string
 }
 
+# ── Phase 9 追加変数（Knowledge Base 連携）────────────────
+
+variable "knowledge_base_id" {
+  description = "Bedrock Knowledge Base ID（RAG モードで使用。空文字の場合 RAG 無効）"
+  type        = string
+  default     = ""
+}
+
 variable "tags" {
   description = "共通タグ"
   type        = map(string)

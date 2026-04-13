@@ -14,11 +14,12 @@ st.set_page_config(
 )
 
 # ── 定数 ─────────────────────────────────────────────────
-MODEL_ID         = "jp.anthropic.claude-haiku-4-5-20251001-v1:0"
-REGION           = "ap-northeast-1"
-MAX_TOKENS       = 1024
-HISTORY_TTL_DAYS = 7
-TABLE_NAME       = os.environ.get("DYNAMODB_TABLE_NAME", "")
+MODEL_ID          = "jp.anthropic.claude-haiku-4-5-20251001-v1:0"
+REGION            = "ap-northeast-1"
+MAX_TOKENS        = 1024
+HISTORY_TTL_DAYS  = 7
+TABLE_NAME        = os.environ.get("DYNAMODB_TABLE_NAME", "")
+KNOWLEDGE_BASE_ID = os.environ.get("KNOWLEDGE_BASE_ID", "")
 
 # ── AWS クライアント（キャッシュ）────────────────────────
 @st.cache_resource
@@ -28,6 +29,10 @@ def get_bedrock_client():
 @st.cache_resource
 def get_dynamodb_client():
     return boto3.client("dynamodb", region_name=REGION)
+
+@st.cache_resource
+def get_bedrock_agent_runtime_client():
+    return boto3.client("bedrock-agent-runtime", region_name=REGION)
 
 # ── DynamoDB: 会話履歴を読み込む ──────────────────────────
 def load_history(session_id: str) -> list[dict]:
@@ -62,6 +67,29 @@ def save_history(session_id: str, messages: list[dict]) -> None:
         )
     except Exception:
         pass
+
+# ── Knowledge Base RAG 回答生成 ───────────────────────────
+# RetrieveAndGenerate API でドキュメント検索 + 回答生成を一括実行
+# ストリーミング非対応のため、回答テキストをそのまま返す
+def invoke_rag(query: str) -> tuple[str, list[str]]:
+    """Knowledge Base に問い合わせて RAG 回答と引用元を返す。"""
+    response = get_bedrock_agent_runtime_client().retrieve_and_generate(
+        input={"text": query},
+        retrieveAndGenerateConfiguration={
+            "type": "KNOWLEDGE_BASE",
+            "knowledgeBaseConfiguration": {
+                "knowledgeBaseId": KNOWLEDGE_BASE_ID,
+                "modelArn": f"arn:aws:bedrock:{REGION}::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0",
+            },
+        },
+    )
+    answer = response["output"]["text"]
+    citations = [
+        ref["content"]["text"]
+        for citation in response.get("citations", [])
+        for ref in citation.get("retrievedReferences", [])
+    ]
+    return answer, citations
 
 # ── Bedrock にストリーミングで問い合わせる ────────────────
 # invoke_model_with_response_stream でチャンクを逐次 yield する
@@ -104,12 +132,25 @@ with st.sidebar:
     st.write(f"**モデル:** Claude Haiku 4.5")
     st.write(f"**リージョン:** {REGION}")
     st.divider()
+
+    # RAG モードトグル（Knowledge Base が設定されている場合のみ表示）
+    if KNOWLEDGE_BASE_ID:
+        rag_mode = st.toggle(
+            "📚 RAG モード（社内規定を参照）",
+            value=False,
+            help="オンにすると Knowledge Base から関連ドキュメントを検索して回答します",
+        )
+    else:
+        rag_mode = False
+        st.caption("※ KNOWLEDGE_BASE_ID 未設定のため RAG モード無効")
+
+    st.divider()
     if st.button("🗑️ 会話をリセット", use_container_width=True):
         st.session_state.messages = []
         save_history(st.session_state.session_id, [])
         st.rerun()
     st.divider()
-    st.caption("aws-ecs-bedrock-chat / Phase 7")
+    st.caption("aws-ecs-bedrock-chat / Phase 9")
 
 # ── メイン画面 ────────────────────────────────────────────
 st.title("🤖 Bedrock Chat")
@@ -128,9 +169,19 @@ if prompt := st.chat_input("メッセージを入力してください"):
 
     with st.chat_message("assistant"):
         try:
-            # write_stream() がジェネレータを受け取り文字を逐次表示する
-            # 完了時に全文テキストを返す（DynamoDB 保存に使用）
-            reply = st.write_stream(invoke_bedrock_stream(st.session_state.messages))
+            if rag_mode:
+                # RAG モード: Knowledge Base から関連チャンクを検索して回答生成
+                with st.spinner("ナレッジベースを検索中..."):
+                    reply, citations = invoke_rag(prompt)
+                st.write(reply)
+                # 引用元ドキュメントを折りたたみ表示
+                if citations:
+                    with st.expander("📎 参照元ドキュメント"):
+                        for i, chunk in enumerate(citations, 1):
+                            st.markdown(f"**[{i}]** {chunk}")
+            else:
+                # 通常モード: ストリーミングで回答生成
+                reply = st.write_stream(invoke_bedrock_stream(st.session_state.messages))
             st.session_state.messages.append({"role": "assistant", "content": reply})
             save_history(st.session_state.session_id, st.session_state.messages)
         except Exception as e:
