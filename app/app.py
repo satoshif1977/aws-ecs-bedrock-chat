@@ -79,7 +79,7 @@ def invoke_rag(query: str) -> tuple[str, list[str]]:
             "type": "KNOWLEDGE_BASE",
             "knowledgeBaseConfiguration": {
                 "knowledgeBaseId": KNOWLEDGE_BASE_ID,
-                "modelArn": f"arn:aws:bedrock:{REGION}::inference-profile/jp.anthropic.claude-haiku-4-5-20251001-v1:0",
+                "modelArn": f"arn:aws:bedrock:{REGION}::foundation-model/anthropic.claude-3-haiku-20240307-v1:0",
             },
         },
     )
