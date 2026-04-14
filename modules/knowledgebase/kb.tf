@@ -29,6 +29,7 @@ resource "aws_bedrockagent_knowledge_base" "main" {
   tags = var.tags
 
   depends_on = [
+    null_resource.create_vector_index,
     aws_opensearchserverless_access_policy.data,
     aws_iam_role_policy.kb_aoss,
     aws_iam_role_policy.kb_s3,

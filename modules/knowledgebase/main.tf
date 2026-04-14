@@ -1,3 +1,17 @@
+# ── Terraform 実行者 ARN の正規化 ─────────────────────────
+# AOSS データアクセスポリシーは STS セッション ARN を受け付けない
+# assumed-role ARN を IAM role ARN 形式に変換して Principal に追加する
+# 例: arn:aws:sts::ACCOUNT:assumed-role/ROLE/SESSION
+#   → arn:aws:iam::ACCOUNT:role/ROLE
+
+locals {
+  admin_iam_role_arn = (
+    strcontains(var.caller_arn, ":assumed-role/")
+    ? "arn:aws:iam::${var.account_id}:role/${regex("assumed-role/([^/]+)/", var.caller_arn)[0]}"
+    : var.caller_arn
+  )
+}
+
 # ── S3 バケット（ナレッジドキュメント格納）─────────────────
 # Knowledge Base が参照するドキュメントを格納する S3 バケット
 # バケット名にアカウント ID を含めてグローバル一意性を確保
@@ -74,6 +88,43 @@ resource "aws_opensearchserverless_collection" "knowledge" {
   ]
 }
 
+# ── OpenSearch Serverless 起動待機 ───────────────────────
+# コレクション作成後、ACTIVE になるまで約 2 分かかる
+# この待機なしに Knowledge Base を作ると 404 エラーになる
+
+resource "time_sleep" "wait_collection_active" {
+  depends_on      = [aws_opensearchserverless_collection.knowledge]
+  create_duration = "120s"
+}
+
+# ── OpenSearch インデックス自動作成 ────────────────────────
+# Bedrock Knowledge Base が要求する固定スキーマのインデックスを作成する
+# 実行タイミング:
+#   コレクション起動(120s待機) → IAM権限付与(20s待機) → インデックス作成
+
+resource "null_resource" "create_vector_index" {
+  triggers = {
+    collection_id = aws_opensearchserverless_collection.knowledge.id
+    policy        = aws_opensearchserverless_access_policy.data.policy
+  }
+
+  provisioner "local-exec" {
+    interpreter = ["python"]
+    command     = abspath("${path.module}/scripts/create_index.py")
+    environment = {
+      COLLECTION_ENDPOINT = aws_opensearchserverless_collection.knowledge.collection_endpoint
+      REGION              = var.region
+      INDEX_NAME          = "bedrock-knowledge-base-default-index"
+    }
+  }
+
+  depends_on = [
+    time_sleep.wait_collection_active,
+    time_sleep.wait_iam_propagation,
+    aws_opensearchserverless_access_policy.data,
+  ]
+}
+
 # ── OpenSearch Serverless データアクセスポリシー ──────────
 # Knowledge Base IAM ロールがコレクション・インデックスを操作できるようにする
 # ※ Principal に Knowledge Base ロール ARN を指定する必要があるため
@@ -107,7 +158,7 @@ resource "aws_opensearchserverless_access_policy" "data" {
     ]
     Principal = [
       aws_iam_role.knowledge_base.arn,
-      "arn:aws:iam::${var.account_id}:root"
+      local.admin_iam_role_arn,
     ]
   }])
 }

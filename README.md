@@ -19,6 +19,9 @@ Streamlit Web UI を Docker コンテナ化し、ALB 経由でインターネッ
 | **CloudWatch Logs** | ECS タスクログ（7日保持） |
 | **IAM** | Task Execution Role / Task Role（最小権限） |
 | **VPC** | パブリックサブネット 2AZ / NAT Gateway なし（学習用コスト最適化） |
+| **Bedrock Knowledge Base** | S3 + OpenSearch Serverless + Titan Embed v2 による RAG（Phase 9） |
+
+
 
 ---
 
@@ -37,12 +40,17 @@ URL に自動で `?session_id=xxxx` が付与され、**ブラウザをリロー
 
 ![App Demo Phase7 Streaming](docs/screenshots/app-demo-phase7-streaming.png)
 
+**Phase 9: RAG モード（Bedrock Knowledge Base 連携）** — サイドバーのトグルで通常チャットと RAG を切り替え。社内ドキュメントを参照した回答と引用元を表示。
+
+![App Demo Phase9 RAG](docs/screenshots/app-demo-phase9-rag.png)
+
 | 機能 | 説明 |
 |---|---|
 | チャット | Claude Haiku 4.5 に自然言語で質問できる |
 | ストリーミング表示 | 回答が1文字ずつリアルタイムで流れる（`invoke_model_with_response_stream`） |
 | 履歴永続化 | リロード後も DynamoDB から会話履歴を自動復元 |
 | 会話リセット | サイドバーのボタンで DynamoDB の履歴ごとクリア |
+| RAG モード | Bedrock Knowledge Base でドキュメント検索→回答生成（引用元表示付き） |
 
 ---
 
@@ -55,6 +63,7 @@ URL に自動で `?session_id=xxxx` が付与され、**ブラウザをリロー
 | オーケストレーション | Amazon ECS / AWS Fargate |
 | ロードバランサー | Application Load Balancer（Multi-AZ） |
 | AI | Amazon Bedrock / Claude Haiku 4.5（クロスリージョン推論プロファイル） |
+| RAG | Bedrock Knowledge Base / OpenSearch Serverless / Titan Embed Text v2 |
 | DB | Amazon DynamoDB（会話履歴の永続化） |
 | IaC | Terraform（モジュール構成） |
 | 監視 | Amazon CloudWatch Logs |
@@ -82,7 +91,8 @@ aws-ecs-bedrock-chat/
 │   ├── alb/                 # ALB / Target Group / Listener
 │   ├── ecs/                 # Cluster / Task Definition / Service
 │   ├── iam/                 # Task Execution Role / Task Role
-│   └── dynamodb/            # 会話履歴テーブル（PAY_PER_REQUEST / TTL）
+│   ├── dynamodb/            # 会話履歴テーブル（PAY_PER_REQUEST / TTL）
+│   └── knowledgebase/       # Bedrock Knowledge Base / OpenSearch Serverless / S3
 └── docs/
     ├── architecture.drawio
     ├── architecture.drawio.png
@@ -155,6 +165,7 @@ terraform destroy
 | **Task Execution Role** | ECR pull / CloudWatch Logs 書き込み |
 | **Task Role** | `bedrock:InvokeModel`（Claude Haiku 4.5 推論プロファイル + 基盤モデル ARN のみ） |
 | **Task Role** | `dynamodb:GetItem` / `dynamodb:PutItem`（会話履歴テーブルのみ） |
+| **Task Role** | `bedrock:Retrieve` / `bedrock:RetrieveAndGenerate`（Knowledge Base のみ） |
 
 ---
 
@@ -170,6 +181,8 @@ terraform destroy
 - **URL クエリパラメータ**（`?session_id=xxxx`）で session_id を永続化し、Streamlit のセッション管理と組み合わせた
 - DynamoDB の **TTL 設定**で 7 日後に古いセッションを自動削除し、運用コストを抑制
 - `terraform destroy` で全リソースをクリーンアップ可能
+- **RAG（Retrieval-Augmented Generation）**：S3 にドキュメントを置くだけで Knowledge Base が自動インデックス化。`RetrieveAndGenerate` API でドキュメント検索＋回答生成を1回の API コールで実現
+- RAG 用モデルと通常チャット用モデルを使い分け：`RetrieveAndGenerate` は推論プロファイル非対応のため Claude 3 Haiku（基盤モデル直接指定）を使用
 
 ---
 
@@ -182,6 +195,8 @@ terraform destroy
 | CloudWatch Logs | 無料枠内（7日保持・少量） |
 | Bedrock（Claude Haiku 4.5） | ~$0.001/1K tokens |
 | DynamoDB（PAY_PER_REQUEST / 少量書き込み） | ほぼ無料枠内 |
+| OpenSearch Serverless（最低 2 OCU） | ~$0.48/時（検証後は destroy 推奨） |
+| Bedrock Knowledge Base Sync | ~$0.001/1K tokens（インデックス作成時のみ） |
 
 > 検証後は `terraform destroy` でリソース削除を推奨。
 

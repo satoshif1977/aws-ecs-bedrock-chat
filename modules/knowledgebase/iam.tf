@@ -58,6 +58,33 @@ resource "aws_iam_role_policy" "kb_aoss" {
   })
 }
 
+# Terraform 実行者（admin ロール）に AOSS データプレーンアクセス権を付与
+# ─────────────────────────────────────────────────────────────────────
+# AOSS はデータプレーン操作（インデックス作成等）に
+# データアクセスポリシーへの追加 に加えて
+# IAM ポリシー側にも aoss:APIAccessAll が必要（IAM と AOSS の二重認証モデル）
+# ロール名を ARN から split で取り出す例: arn:aws:iam::ACCOUNT:role/ROLE → ROLE
+
+resource "aws_iam_role_policy" "admin_aoss_access" {
+  name = "aoss-data-plane-access-for-setup"
+  role = split("/", local.admin_iam_role_arn)[1]
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["aoss:APIAccessAll"]
+      Resource = aws_opensearchserverless_collection.knowledge.arn
+    }]
+  })
+}
+
+# IAM ポリシー伝播待機（IAM は最大10秒程度で有効化される）
+resource "time_sleep" "wait_iam_propagation" {
+  create_duration = "20s"
+  depends_on      = [aws_iam_role_policy.admin_aoss_access]
+}
+
 # Bedrock Titan Embed でテキストをベクトル化する権限
 resource "aws_iam_role_policy" "kb_bedrock_embed" {
   name = "bedrock-embed"

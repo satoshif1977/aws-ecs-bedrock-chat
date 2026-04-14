@@ -5,6 +5,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+    time = {
+      source  = "hashicorp/time"
+      version = "~> 0.10"
+    }
   }
   # Phase 4 はローカル state で管理（Phase 5 以降で S3 + DynamoDB に移行予定）
 }
@@ -92,6 +96,7 @@ module "knowledgebase" {
   env        = var.env
   region     = var.aws_region
   account_id = data.aws_caller_identity.current.account_id
+  caller_arn = data.aws_caller_identity.current.arn
   tags       = local.tags
 }
 

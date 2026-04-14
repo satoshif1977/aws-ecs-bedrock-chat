@@ -23,3 +23,8 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "caller_arn" {
+  description = "Terraform 実行者の ARN（AOSS データアクセスポリシーに追加する）"
+  type        = string
+}
