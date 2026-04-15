@@ -1,6 +1,6 @@
 <mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.6.6 Chrome/144.0.7559.236 Electron/40.8.4 Safari/537.36" version="29.6.6">
   <diagram name="Page-1" id="diagram-1">
-    <mxGraphModel dx="1954" dy="1175" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1750" pageHeight="1060" math="0" shadow="0">
+    <mxGraphModel dx="1588" dy="899" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1750" pageHeight="1060" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -133,9 +133,6 @@
             <mxPoint x="624" y="613" as="sourcePoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="edge-github-ecr" edge="1" parent="1" source="icon-github" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#545B64;strokeWidth=2;dashed=1;dashPattern=8 4;fontFamily=Helvetica;fontSize=11;" target="icon-ecr" value="docker push (OIDC)">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
         <mxCell id="edge-ecr-ecs" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;strokeColor=#545B64;strokeWidth=1.5;dashed=1;dashPattern=8 4;fontFamily=Helvetica;fontSize=11;" value="イメージ pull">
           <mxGeometry relative="1" x="0.1067" y="-39" as="geometry">
             <mxPoint as="offset" />
@@ -145,15 +142,6 @@
             <mxPoint x="486.0000000000002" y="264.03703703703707" as="sourcePoint" />
             <mxPoint x="587" y="552" as="targetPoint" />
           </mxGeometry>
-        </mxCell>
-        <mxCell id="Og8xArK2x7yftZUY78be-1" connectable="0" parent="1" style="group" value="" vertex="1">
-          <mxGeometry height="120" width="120" x="16" y="209" as="geometry" />
-        </mxCell>
-        <mxCell id="github-container" parent="Og8xArK2x7yftZUY78be-1" style="rounded=1;arcSize=8;strokeColor=#545B64;fillColor=light-dark(#F5F5F5,rgba(84,91,100,0.15));fontFamily=Helvetica;fontSize=12;fontStyle=1;verticalAlign=top;fillStyle=auto;container=0;" value="外部" vertex="1">
-          <mxGeometry height="120" width="120" as="geometry" />
-        </mxCell>
-        <mxCell id="icon-github" parent="Og8xArK2x7yftZUY78be-1" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#232F3E;labelBackgroundColor=none;align=center;verticalLabelPosition=bottom;verticalAlign=top;shape=mxgraph.aws4.user;fontFamily=Helvetica;fontSize=10;" value="GitHub Actions&lt;br&gt;&lt;i&gt;CI/CD パイプライン&lt;/i&gt;" vertex="1">
-          <mxGeometry height="48" width="48" x="37" y="33" as="geometry" />
         </mxCell>
         <mxCell id="Og8xArK2x7yftZUY78be-2" connectable="0" parent="1" style="group" value="" vertex="1">
           <mxGeometry height="120" width="120" x="16" y="522" as="geometry" />
@@ -240,6 +228,23 @@
         </mxCell>
         <mxCell id="edge-kb-s3" edge="1" parent="1" source="icon-opensearch" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#545B64;strokeWidth=2;fontFamily=Helvetica;fontSize=11;" target="icon-s3" value="ドキュメント取得">
           <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="MQW6OzJo8HeMwN2yWJ9t-4" connectable="0" parent="1" style="group" value="" vertex="1">
+          <mxGeometry height="120" width="120" x="17" y="209" as="geometry" />
+        </mxCell>
+        <mxCell id="MQW6OzJo8HeMwN2yWJ9t-1" connectable="0" parent="MQW6OzJo8HeMwN2yWJ9t-4" style="group" value="" vertex="1">
+          <mxGeometry height="120" width="120" as="geometry" />
+        </mxCell>
+        <mxCell id="MQW6OzJo8HeMwN2yWJ9t-2" parent="MQW6OzJo8HeMwN2yWJ9t-1" style="rounded=1;arcSize=8;strokeColor=#545B64;fillColor=light-dark(#F5F5F5,rgba(84,91,100,0.15));fontFamily=Helvetica;fontSize=12;fontStyle=1;verticalAlign=top;fillStyle=auto;container=0;" value="外部" vertex="1">
+          <mxGeometry height="120" width="120" as="geometry" />
+        </mxCell>
+        <mxCell id="Og8xArK2x7yftZUY78be-16" parent="MQW6OzJo8HeMwN2yWJ9t-4" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#000000;labelBackgroundColor=none;align=center;verticalLabelPosition=bottom;verticalAlign=top;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.opensearch_service;fontFamily=Helvetica;fontSize=10;" value="GitHub Actions&lt;br&gt;&lt;i&gt;CI/CD パイプライン&lt;/i&gt;" vertex="1">
+          <mxGeometry height="48" width="48" x="36" y="36" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-github-ecr" edge="1" parent="1" source="Og8xArK2x7yftZUY78be-16" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;strokeColor=#545B64;strokeWidth=2;dashed=1;dashPattern=8 4;fontFamily=Helvetica;fontSize=11;" target="icon-ecr" value="docker push (OIDC)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="102" y="269" as="sourcePoint" />
+          </mxGeometry>
         </mxCell>
       </root>
     </mxGraphModel>
