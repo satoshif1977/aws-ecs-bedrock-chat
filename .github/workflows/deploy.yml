@@ -1,69 +1,35 @@
-name: Deploy to ECS
+name: CI Check
 
-# master ブランチへの push 時に自動実行
 on:
   push:
     branches:
       - master
 
 jobs:
-  deploy:
-    name: Build & Deploy
+  ci:
+    name: Lint & Docker Build
     runs-on: ubuntu-latest
 
-    # Node.js 24 ランタイムを使用（Node.js 20 は 2026-06-02 に deprecated）
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
-    # OIDC トークン取得に必要な権限
-    permissions:
-      id-token: write   # GitHub OIDC トークンの発行
-      contents: read    # リポジトリのコードを読む
-
     steps:
-      # 1. ソースコードを取得
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 2. AWS 認証（OIDC 経由 / アクセスキー不要）
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-          aws-region: ap-northeast-1
+          python-version: '3.11'
 
-      # 3. ECR にログイン
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+      - name: Install lint tools
+        run: pip install ruff black
 
-      # 4. Docker ビルド & ECR push
-      - name: Build and push Docker image
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: bedrock-chat
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          docker tag  $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
-                      $ECR_REGISTRY/$ECR_REPOSITORY:latest
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+      - name: ruff（構文チェック）
+        run: ruff check app/
 
-      # 5. ECS に新タスクを強制デプロイ
-      - name: Deploy to ECS
-        run: |
-          aws ecs update-service \
-            --cluster ecs-bedrock-chat-dev-cluster \
-            --service  ecs-bedrock-chat-dev-service \
-            --force-new-deployment \
-            --region ap-northeast-1
+      - name: black（フォーマットチェック）
+        run: black --check app/
 
-      # 6. 新タスクの起動を待機
-      - name: Wait for deployment to stabilize
-        run: |
-          aws ecs wait services-stable \
-            --cluster ecs-bedrock-chat-dev-cluster \
-            --services ecs-bedrock-chat-dev-service \
-            --region ap-northeast-1
-          echo "✅ デプロイ完了"
+      - name: Docker Build Check
+        run: docker build -t bedrock-chat:ci .
