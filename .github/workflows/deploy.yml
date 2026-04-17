@@ -22,14 +22,17 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install lint tools
-        run: pip install ruff black
+      - name: Install lint tools & test deps
+        run: pip install ruff black pytest boto3
 
       - name: ruff（構文チェック）
         run: ruff check app/
 
       - name: black（フォーマットチェック）
         run: black --check app/
+
+      - name: pytest（ユニットテスト）
+        run: pytest app/test_app.py -v
 
       - name: Docker Build Check
         run: docker build -t bedrock-chat:ci .
