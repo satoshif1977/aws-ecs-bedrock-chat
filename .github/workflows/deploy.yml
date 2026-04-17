@@ -11,6 +11,10 @@ jobs:
     name: Build & Deploy
     runs-on: ubuntu-latest
 
+    # Node.js 24 ランタイムを使用（Node.js 20 は 2026-06-02 に deprecated）
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
     # OIDC トークン取得に必要な権限
     permissions:
       id-token: write   # GitHub OIDC トークンの発行
