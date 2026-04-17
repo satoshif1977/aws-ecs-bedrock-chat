@@ -14,25 +14,29 @@ st.set_page_config(
 )
 
 # ── 定数 ─────────────────────────────────────────────────
-MODEL_ID          = "jp.anthropic.claude-haiku-4-5-20251001-v1:0"
-REGION            = "ap-northeast-1"
-MAX_TOKENS        = 1024
-HISTORY_TTL_DAYS  = 7
-TABLE_NAME        = os.environ.get("DYNAMODB_TABLE_NAME", "")
+MODEL_ID = "jp.anthropic.claude-haiku-4-5-20251001-v1:0"
+REGION = "ap-northeast-1"
+MAX_TOKENS = 1024
+HISTORY_TTL_DAYS = 7
+TABLE_NAME = os.environ.get("DYNAMODB_TABLE_NAME", "")
 KNOWLEDGE_BASE_ID = os.environ.get("KNOWLEDGE_BASE_ID", "")
+
 
 # ── AWS クライアント（キャッシュ）────────────────────────
 @st.cache_resource
 def get_bedrock_client():
     return boto3.client("bedrock-runtime", region_name=REGION)
 
+
 @st.cache_resource
 def get_dynamodb_client():
     return boto3.client("dynamodb", region_name=REGION)
 
+
 @st.cache_resource
 def get_bedrock_agent_runtime_client():
     return boto3.client("bedrock-agent-runtime", region_name=REGION)
+
 
 # ── DynamoDB: 会話履歴を読み込む ──────────────────────────
 def load_history(session_id: str) -> list[dict]:
@@ -50,6 +54,7 @@ def load_history(session_id: str) -> list[dict]:
         pass
     return []
 
+
 # ── DynamoDB: 会話履歴を保存する ──────────────────────────
 def save_history(session_id: str, messages: list[dict]) -> None:
     """DynamoDB にセッションの会話履歴を保存する（TTL: 7日）。"""
@@ -61,12 +66,13 @@ def save_history(session_id: str, messages: list[dict]) -> None:
             TableName=TABLE_NAME,
             Item={
                 "session_id": {"S": session_id},
-                "messages":   {"S": json.dumps(messages, ensure_ascii=False)},
-                "ttl":        {"N": str(ttl)},
+                "messages": {"S": json.dumps(messages, ensure_ascii=False)},
+                "ttl": {"N": str(ttl)},
             },
         )
     except Exception:
         pass
+
 
 # ── Knowledge Base RAG 回答生成 ───────────────────────────
 # RetrieveAndGenerate API でドキュメント検索 + 回答生成を一括実行
@@ -91,6 +97,7 @@ def invoke_rag(query: str) -> tuple[str, list[str]]:
     ]
     return answer, citations
 
+
 # ── Bedrock にストリーミングで問い合わせる ────────────────
 # invoke_model_with_response_stream でチャンクを逐次 yield する
 # st.write_stream() がこのジェネレータを受け取りリアルタイム表示する
@@ -111,6 +118,7 @@ def invoke_bedrock_stream(messages: list[dict]):
             if delta.get("type") == "text_delta":
                 yield delta.get("text", "")
 
+
 # ── セッション ID 管理（URL クエリパラメータで永続化）────
 # ブラウザをリロードしても同じ session_id が URL に残るため
 # DynamoDB から過去の会話を復元できる
@@ -129,7 +137,7 @@ if "messages" not in st.session_state:
 # ── サイドバー ────────────────────────────────────────────
 with st.sidebar:
     st.title("⚙️ 設定")
-    st.write(f"**モデル:** Claude Haiku 4.5")
+    st.write("**モデル:** Claude Haiku 4.5")
     st.write(f"**リージョン:** {REGION}")
     st.divider()
 
@@ -181,7 +189,9 @@ if prompt := st.chat_input("メッセージを入力してください"):
                             st.markdown(f"**[{i}]** {chunk}")
             else:
                 # 通常モード: ストリーミングで回答生成
-                reply = st.write_stream(invoke_bedrock_stream(st.session_state.messages))
+                reply = st.write_stream(
+                    invoke_bedrock_stream(st.session_state.messages)
+                )
             st.session_state.messages.append({"role": "assistant", "content": reply})
             save_history(st.session_state.session_id, st.session_state.messages)
         except Exception as e:
