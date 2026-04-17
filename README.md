@@ -34,15 +34,15 @@ Streamlit Web UI を Docker コンテナ化し、ALB 経由でインターネッ
 ALB の DNS 名でブラウザからアクセスし、Claude Haiku 4.5 とチャットできます。
 URL に自動で `?session_id=xxxx` が付与され、**ブラウザをリロードしても会話履歴が DynamoDB から復元**されます。
 
-![App Demo Phase5](docs/screenshots/app-demo.png)
+### 通常チャット
 
-**Phase 6: DynamoDB 会話履歴連携** — URL に `?session_id=xxxx` が付与され、リロード後も履歴が復元されます。
+![Demo](docs/demo/demo.gif)
 
-![App Demo Phase6](docs/screenshots/app-demo-phase6.png)
+### RAG モード（Bedrock Knowledge Base 連携）
 
-**Phase 7: ストリーミングレスポンス** — 文字がリアルタイムで流れます（右上の Stop ボタンで中断可）。
+社内ドキュメントを参照した回答と引用元を表示します。
 
-![App Demo Phase7 Streaming](docs/screenshots/app-demo-phase7-streaming.png)
+![Demo RAG](docs/demo/demo-rag.gif)
 
 **Phase 9: RAG モード（Bedrock Knowledge Base 連携）** — サイドバーのトグルで通常チャットと RAG を切り替え。社内ドキュメントを参照した回答と引用元を表示。
 
