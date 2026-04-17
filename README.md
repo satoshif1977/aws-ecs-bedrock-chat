@@ -1,6 +1,7 @@
 # aws-ecs-bedrock-chat
 
 ![CI](https://github.com/satoshif1977/aws-ecs-bedrock-chat/actions/workflows/deploy.yml/badge.svg)
+[![codecov](https://codecov.io/gh/satoshif1977/aws-ecs-bedrock-chat/branch/master/graph/badge.svg)](https://codecov.io/gh/satoshif1977/aws-ecs-bedrock-chat)
 ![AWS](https://img.shields.io/badge/AWS-232F3E?style=flat&logo=amazon-aws&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)
 ![Terraform](https://img.shields.io/badge/Terraform-623CE4?style=flat&logo=terraform&logoColor=white)
