@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - master
+  pull_request:
+    branches:
+      - master
 
 jobs:
   ci:
@@ -44,3 +47,44 @@ jobs:
 
       - name: Docker Build Check
         run: docker build -t bedrock-chat:ci .
+
+  terraform:
+    name: Terraform 構文チェック
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~1.5"
+
+      - name: terraform fmt
+        run: terraform fmt --check -recursive
+
+      - name: terraform init（バックエンドなし）
+        run: terraform -chdir=environments/dev init -backend=false -input=false
+
+      - name: terraform validate
+        run: terraform -chdir=environments/dev validate
+
+  security:
+    name: Checkov セキュリティスキャン
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: .
+          framework: terraform
+          soft_fail: false
+          skip_check: >-
+            CKV_AWS_158,CKV_AWS_338,
+            CKV_AWS_91,CKV_AWS_150,
+            CKV_AWS_131,CKV2_AWS_20,
+            CKV2_AWS_28,CKV_AWS_336,
+            CKV_AWS_97
+          output_format: cli

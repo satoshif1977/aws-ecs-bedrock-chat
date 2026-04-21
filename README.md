@@ -226,6 +226,36 @@ terraform destroy
 
 ---
 
+## CI / セキュリティスキャン
+
+GitHub Actions で Python Lint・テスト・Docker ビルド・Terraform 静的解析（Checkov）を自動実行しています。
+
+### 実施内容
+
+| ジョブ | 内容 |
+|---|---|
+| ruff / black | Python コードの構文・フォーマットチェック |
+| pytest + Codecov | ユニットテスト実行・カバレッジ計測 |
+| Docker Build | Dockerfile の正常ビルド確認 |
+| terraform fmt / validate | Terraform フォーマット・構文チェック |
+| Checkov セキュリティスキャン | IaC のセキュリティポリシー違反を検出（soft_fail: false） |
+
+### 意図的にスキップしている項目（dev / PoC の合理的な省略）
+
+| チェック ID | 内容 | 理由 |
+|---|---|---|
+| CKV_AWS_158 | CloudWatch Logs KMS 暗号化 | dev/PoC では不要 |
+| CKV_AWS_338 | CloudWatch Logs 保持期間 1 年未満 | dev は 30 日で十分 |
+| CKV_AWS_91 | ALB アクセスログ未設定 | dev/PoC では不要 |
+| CKV_AWS_150 | ALB 削除保護未設定 | dev/PoC では不要 |
+| CKV_AWS_131 | ALB HTTP → HTTPS リダイレクト | dev は HTTP のみ（HTTPS 証明書なし） |
+| CKV2_AWS_20 | ALB HTTP → HTTPS リダイレクト（別チェック） | 同上 |
+| CKV2_AWS_28 | ALB WAF 未設定 | dev/PoC では不要 |
+| CKV_AWS_336 | ECS タスク読み取り専用 root filesystem | Streamlit が書き込みを必要とするため |
+| CKV_AWS_97 | ECS タスク定義ホストネットワーク | Fargate では適用外 |
+
+---
+
 ## CI/CD パイプライン（Phase 8）
 
 `master` ブランチへの push で自動デプロイが実行されます。
