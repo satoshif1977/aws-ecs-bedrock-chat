@@ -9,7 +9,12 @@ import sys
 from unittest.mock import MagicMock, patch
 
 # Streamlit をモック（module-level の st.* 呼び出しを回避）
-sys.modules["streamlit"] = MagicMock()
+# chat_input と file_uploader は None を返すよう設定しモジュールレベルの分岐をスキップ
+_mock_st = MagicMock()
+_mock_st.chat_input.return_value = None
+_mock_st.file_uploader.return_value = None
+_mock_st.query_params = {}
+sys.modules["streamlit"] = _mock_st
 
 import app  # noqa: E402
 
@@ -128,3 +133,28 @@ class TestInvokeRag:
         answer, citations = app.invoke_rag("質問")
         assert answer == "回答"
         assert citations == []
+
+
+# ── build_multimodal_content テスト ──────────────────────
+class TestBuildMultimodalContent:
+    def test_正常系_画像とテキストのリストを返す(self):
+        image_bytes = b"fake_image_bytes"
+        result = app.build_multimodal_content(image_bytes, "image/png", "この画像は？")
+        assert len(result) == 2
+        assert result[0]["type"] == "image"
+        assert result[0]["source"]["type"] == "base64"
+        assert result[0]["source"]["media_type"] == "image/png"
+        assert result[1]["type"] == "text"
+        assert result[1]["text"] == "この画像は？"
+
+    def test_base64エンコードが正しい(self):
+        import base64
+        image_bytes = b"test"
+        result = app.build_multimodal_content(image_bytes, "image/jpeg", "test")
+        expected_b64 = base64.standard_b64encode(b"test").decode("utf-8")
+        assert result[0]["source"]["data"] == expected_b64
+
+    def test_各メディアタイプで動作する(self):
+        for media_type in ["image/jpeg", "image/png", "image/gif", "image/webp"]:
+            result = app.build_multimodal_content(b"img", media_type, "質問")
+            assert result[0]["source"]["media_type"] == media_type

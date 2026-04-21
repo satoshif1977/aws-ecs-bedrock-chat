@@ -1,3 +1,4 @@
+import base64
 import json
 import os
 import time
@@ -20,6 +21,15 @@ MAX_TOKENS = 1024
 HISTORY_TTL_DAYS = 7
 TABLE_NAME = os.environ.get("DYNAMODB_TABLE_NAME", "")
 KNOWLEDGE_BASE_ID = os.environ.get("KNOWLEDGE_BASE_ID", "")
+
+SUPPORTED_IMAGE_TYPES = ["jpg", "jpeg", "png", "gif", "webp"]
+EXT_TO_MEDIA_TYPE: dict[str, str] = {
+    "jpg": "image/jpeg",
+    "jpeg": "image/jpeg",
+    "png": "image/png",
+    "gif": "image/gif",
+    "webp": "image/webp",
+}
 
 
 # ── AWS クライアント（キャッシュ）────────────────────────
@@ -75,8 +85,6 @@ def save_history(session_id: str, messages: list[dict]) -> None:
 
 
 # ── Knowledge Base RAG 回答生成 ───────────────────────────
-# RetrieveAndGenerate API でドキュメント検索 + 回答生成を一括実行
-# ストリーミング非対応のため、回答テキストをそのまま返す
 def invoke_rag(query: str) -> tuple[str, list[str]]:
     """Knowledge Base に問い合わせて RAG 回答と引用元を返す。"""
     response = get_bedrock_agent_runtime_client().retrieve_and_generate(
@@ -99,8 +107,7 @@ def invoke_rag(query: str) -> tuple[str, list[str]]:
 
 
 # ── Bedrock にストリーミングで問い合わせる ────────────────
-# invoke_model_with_response_stream でチャンクを逐次 yield する
-# st.write_stream() がこのジェネレータを受け取りリアルタイム表示する
+# messages にはテキストのみ / 画像+テキスト（マルチモーダル）どちらも対応
 def invoke_bedrock_stream(messages: list[dict]):
     body = {
         "anthropic_version": "bedrock-2023-05-31",
@@ -119,9 +126,24 @@ def invoke_bedrock_stream(messages: list[dict]):
                 yield delta.get("text", "")
 
 
+# ── 画像を base64 変換してマルチモーダルコンテンツを生成 ──
+def build_multimodal_content(image_bytes: bytes, media_type: str, text: str) -> list[dict]:
+    """画像 + テキストの Bedrock マルチモーダルコンテンツリストを返す。"""
+    image_b64 = base64.standard_b64encode(image_bytes).decode("utf-8")
+    return [
+        {
+            "type": "image",
+            "source": {
+                "type": "base64",
+                "media_type": media_type,
+                "data": image_b64,
+            },
+        },
+        {"type": "text", "text": text},
+    ]
+
+
 # ── セッション ID 管理（URL クエリパラメータで永続化）────
-# ブラウザをリロードしても同じ session_id が URL に残るため
-# DynamoDB から過去の会話を復元できる
 if "session_id" not in st.session_state:
     params = st.query_params
     if "session_id" in params:
@@ -141,6 +163,18 @@ with st.sidebar:
     st.write(f"**リージョン:** {REGION}")
     st.divider()
 
+    # 画像アップロード（マルチモーダル）
+    st.write("**🖼️ 画像アップロード**")
+    uploaded_file = st.file_uploader(
+        "PNG / JPG / GIF / WebP",
+        type=SUPPORTED_IMAGE_TYPES,
+        help="画像をアップロードして「この画像について教えて」などと質問できます",
+    )
+    if uploaded_file:
+        st.image(uploaded_file, caption=uploaded_file.name, use_container_width=True)
+
+    st.divider()
+
     # RAG モードトグル（Knowledge Base が設定されている場合のみ表示）
     if KNOWLEDGE_BASE_ID:
         rag_mode = st.toggle(
@@ -158,23 +192,46 @@ with st.sidebar:
         save_history(st.session_state.session_id, [])
         st.rerun()
     st.divider()
-    st.caption("aws-ecs-bedrock-chat / Phase 9")
+    st.caption("aws-ecs-bedrock-chat / Phase 10")
 
 # ── メイン画面 ────────────────────────────────────────────
 st.title("🤖 Bedrock Chat")
 st.caption("Amazon Bedrock（Claude Haiku 4.5）によるチャットアプリ")
 
-# 過去メッセージを表示
+# 過去メッセージを表示（DynamoDB から復元したテキスト履歴）
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.write(msg["content"])
 
 # ユーザー入力
 if prompt := st.chat_input("メッセージを入力してください"):
-    st.session_state.messages.append({"role": "user", "content": prompt})
+
+    # ── ユーザーメッセージを画面に表示 ───────────────────
     with st.chat_message("user"):
+        if uploaded_file:
+            st.image(uploaded_file.getvalue(), use_container_width=True)
         st.write(prompt)
 
+    # ── Bedrock 送信用メッセージを構築 ───────────────────
+    # 画像あり → マルチモーダルコンテンツを最新ターンに追加
+    # 画像なし → テキストのみ（従来動作）
+    if uploaded_file:
+        ext = uploaded_file.name.rsplit(".", 1)[-1].lower()
+        media_type = EXT_TO_MEDIA_TYPE.get(ext, "image/png")
+        multimodal_content = build_multimodal_content(
+            uploaded_file.getvalue(), media_type, prompt
+        )
+        bedrock_messages = st.session_state.messages + [
+            {"role": "user", "content": multimodal_content}
+        ]
+        # DynamoDB には画像を除いたテキストのみ保存（400KB 制限対策）
+        display_text = f"[🖼️ {uploaded_file.name}] {prompt}"
+        st.session_state.messages.append({"role": "user", "content": display_text})
+    else:
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        bedrock_messages = st.session_state.messages
+
+    # ── アシスタント回答を生成 ────────────────────────────
     with st.chat_message("assistant"):
         try:
             if rag_mode:
@@ -182,16 +239,14 @@ if prompt := st.chat_input("メッセージを入力してください"):
                 with st.spinner("ナレッジベースを検索中..."):
                     reply, citations = invoke_rag(prompt)
                 st.write(reply)
-                # 引用元ドキュメントを折りたたみ表示
                 if citations:
                     with st.expander("📎 参照元ドキュメント"):
                         for i, chunk in enumerate(citations, 1):
                             st.markdown(f"**[{i}]** {chunk}")
             else:
-                # 通常モード: ストリーミングで回答生成
-                reply = st.write_stream(
-                    invoke_bedrock_stream(st.session_state.messages)
-                )
+                # 通常モード: ストリーミングで回答生成（マルチモーダル対応）
+                reply = st.write_stream(invoke_bedrock_stream(bedrock_messages))
+
             st.session_state.messages.append({"role": "assistant", "content": reply})
             save_history(st.session_state.session_id, st.session_state.messages)
         except Exception as e:
