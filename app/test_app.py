@@ -149,6 +149,7 @@ class TestBuildMultimodalContent:
 
     def test_base64エンコードが正しい(self):
         import base64
+
         image_bytes = b"test"
         result = app.build_multimodal_content(image_bytes, "image/jpeg", "test")
         expected_b64 = base64.standard_b64encode(b"test").decode("utf-8")
