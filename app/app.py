@@ -127,7 +127,9 @@ def invoke_bedrock_stream(messages: list[dict]):
 
 
 # ── 画像を base64 変換してマルチモーダルコンテンツを生成 ──
-def build_multimodal_content(image_bytes: bytes, media_type: str, text: str) -> list[dict]:
+def build_multimodal_content(
+    image_bytes: bytes, media_type: str, text: str
+) -> list[dict]:
     """画像 + テキストの Bedrock マルチモーダルコンテンツリストを返す。"""
     image_b64 = base64.standard_b64encode(image_bytes).decode("utf-8")
     return [
