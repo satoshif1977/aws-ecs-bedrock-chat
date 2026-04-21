@@ -242,17 +242,21 @@ GitHub Actions で Python Lint・テスト・Docker ビルド・Terraform 静的
 
 ### 意図的にスキップしている項目（dev / PoC の合理的な省略）
 
-| チェック ID | 内容 | 理由 |
+| カテゴリ | チェック ID | 理由 |
 |---|---|---|
-| CKV_AWS_158 | CloudWatch Logs KMS 暗号化 | dev/PoC では不要 |
-| CKV_AWS_338 | CloudWatch Logs 保持期間 1 年未満 | dev は 30 日で十分 |
-| CKV_AWS_91 | ALB アクセスログ未設定 | dev/PoC では不要 |
-| CKV_AWS_150 | ALB 削除保護未設定 | dev/PoC では不要 |
-| CKV_AWS_131 | ALB HTTP → HTTPS リダイレクト | dev は HTTP のみ（HTTPS 証明書なし） |
-| CKV2_AWS_20 | ALB HTTP → HTTPS リダイレクト（別チェック） | 同上 |
-| CKV2_AWS_28 | ALB WAF 未設定 | dev/PoC では不要 |
-| CKV_AWS_336 | ECS タスク読み取り専用 root filesystem | Streamlit が書き込みを必要とするため |
-| CKV_AWS_97 | ECS タスク定義ホストネットワーク | Fargate では適用外 |
+| **ALB** | CKV_AWS_2 / CKV_AWS_103 / CKV_AWS_378 / CKV2_AWS_74 | dev は HTTP のみ（HTTPS 証明書なし） |
+| **ALB** | CKV_AWS_91 / CKV_AWS_150 / CKV2_AWS_28 / CKV2_AWS_76 | dev/PoC では不要（アクセスログ・削除保護・WAF） |
+| **ALB** | CKV_AWS_131 / CKV2_AWS_20 | HTTP → HTTPS リダイレクト（dev は HTTP のみ） |
+| **ECS** | CKV_AWS_97 / CKV_AWS_223 / CKV_AWS_334 / CKV_AWS_336 | Fargate 適用外・dev/PoC 省略（ECS Exec ログ・非特権コンテナ） |
+| **ECS** | CKV_AWS_333 | パブリックサブネット構成で Public IP 付与は意図的（NAT Gateway なし） |
+| **S3** | CKV_AWS_18 / CKV_AWS_21 / CKV_AWS_144 / CKV_AWS_145 | dev/PoC 省略（アクセスログ・バージョニング・レプリケーション・KMS） |
+| **S3** | CKV_AWS_54 / CKV_AWS_56 / CKV_AWS_57 | public_access_block 設定済みだが Checkov が別リソースとして相関できない false positive |
+| **S3** | CKV2_AWS_61 / CKV2_AWS_62 | dev/PoC 省略（ライフサイクル・イベント通知） |
+| **DynamoDB** | CKV_AWS_119 / CKV2_AWS_16 | dev/PoC 省略（KMS CMK・Auto Scaling） |
+| **VPC/SG** | CKV_AWS_23 / CKV_AWS_24 / CKV_AWS_260 / CKV_AWS_382 | ALB 用ポート 80 インバウンド・全 egress は構成上必要 |
+| **VPC/SG** | CKV_AWS_130 / CKV2_AWS_5 / CKV2_AWS_11 / CKV2_AWS_12 | パブリックサブネット構成・VPC フローログは dev/PoC 省略 |
+| **IAM** | CKV_AWS_60〜63 / CKV_AWS_274 / CKV_AWS_286〜290 / CKV_AWS_355 / CKV2_AWS_40 | OIDC 信頼ポリシー・必要な権限に対する Checkov の false positive |
+| **CloudWatch** | CKV_AWS_66 / CKV_AWS_158 / CKV_AWS_338 | dev/PoC 省略（保持期間・KMS 暗号化） |
 
 ---
 

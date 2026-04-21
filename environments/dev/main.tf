@@ -79,13 +79,13 @@ module "dynamodb" {
 # ── IAM モジュール ─────────────────────────────────────────
 # Task Execution Role / Task Role を作成
 module "iam" {
-  source              = "../../modules/iam"
-  project             = var.project
-  env                 = var.env
-  region              = var.aws_region
-  account_id          = data.aws_caller_identity.current.account_id
-  dynamodb_table_arn  = module.dynamodb.table_arn
-  tags                = local.tags
+  source             = "../../modules/iam"
+  project            = var.project
+  env                = var.env
+  region             = var.aws_region
+  account_id         = data.aws_caller_identity.current.account_id
+  dynamodb_table_arn = module.dynamodb.table_arn
+  tags               = local.tags
 }
 
 # ── Knowledge Base モジュール ──────────────────────────────
@@ -104,14 +104,14 @@ module "knowledgebase" {
 # GitHub Actions 用 OIDC Provider + IAM Role を作成
 # アクセスキー不要で GitHub から安全に AWS 操作できる
 module "cicd" {
-  source              = "../../modules/cicd"
-  project             = var.project
-  env                 = var.env
-  region              = var.aws_region
-  account_id          = data.aws_caller_identity.current.account_id
-  github_repo         = var.github_repo
-  ecr_repository_arn  = data.aws_ecr_repository.app.arn
-  tags                = local.tags
+  source             = "../../modules/cicd"
+  project            = var.project
+  env                = var.env
+  region             = var.aws_region
+  account_id         = data.aws_caller_identity.current.account_id
+  github_repo        = var.github_repo
+  ecr_repository_arn = data.aws_ecr_repository.app.arn
+  tags               = local.tags
 }
 
 # ── ECS モジュール ─────────────────────────────────────────

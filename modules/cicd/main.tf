@@ -85,7 +85,7 @@ resource "aws_iam_role_policy" "ecs_deploy" {
       Effect = "Allow"
       # UpdateService: force-new-deployment に必要
       # DescribeServices: aws ecs wait services-stable が内部で呼び出す
-      Action = ["ecs:UpdateService", "ecs:DescribeServices"]
+      Action   = ["ecs:UpdateService", "ecs:DescribeServices"]
       Resource = "arn:aws:ecs:${var.region}:${var.account_id}:service/${var.project}-${var.env}-cluster/${var.project}-${var.env}-service"
     }]
   })

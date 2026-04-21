@@ -59,9 +59,9 @@ resource "aws_ecs_task_definition" "this" {
 
     # コンテナ内の環境変数
     environment = [
-      { name = "AWS_DEFAULT_REGION",   value = var.region },
-      { name = "DYNAMODB_TABLE_NAME",  value = var.dynamodb_table_name },
-      { name = "KNOWLEDGE_BASE_ID",    value = var.knowledge_base_id }
+      { name = "AWS_DEFAULT_REGION", value = var.region },
+      { name = "DYNAMODB_TABLE_NAME", value = var.dynamodb_table_name },
+      { name = "KNOWLEDGE_BASE_ID", value = var.knowledge_base_id }
     ]
   }])
 
@@ -73,15 +73,16 @@ resource "aws_ecs_task_definition" "this" {
 # ALB の Target Group にコンテナ IP を自動登録する
 
 resource "aws_ecs_service" "this" {
-  name            = "${var.project}-${var.env}-service"
-  cluster         = aws_ecs_cluster.this.id
-  task_definition = aws_ecs_task_definition.this.arn
-  desired_count   = var.desired_count
-  launch_type     = "FARGATE"
+  name             = "${var.project}-${var.env}-service"
+  cluster          = aws_ecs_cluster.this.id
+  task_definition  = aws_ecs_task_definition.this.arn
+  desired_count    = var.desired_count
+  launch_type      = "FARGATE"
+  platform_version = "LATEST"
 
   network_configuration {
-    subnets          = var.subnet_ids
-    security_groups  = [var.ecs_task_security_group_id]
+    subnets         = var.subnet_ids
+    security_groups = [var.ecs_task_security_group_id]
     # パブリックサブネット構成のため Public IP を付与（ECR pull / Bedrock API に必要）
     assign_public_ip = true
   }
