@@ -40,19 +40,33 @@ Streamlit Web UI を Docker コンテナ化し、ALB 経由でインターネッ
 ALB の DNS 名でブラウザからアクセスし、Claude Haiku 4.5 とチャットできます。
 URL に自動で `?session_id=xxxx` が付与され、**ブラウザをリロードしても会話履歴が DynamoDB から復元**されます。
 
-### 通常チャット
+### 操作デモ（GIF）
 
-![Demo](docs/demo/demo.gif)
+![Demo](docs/screenshots/demo.gif)
 
-### RAG モード（Bedrock Knowledge Base 連携）
+---
 
-社内ドキュメントを参照した回答と引用元を表示します。
+## スクリーンショット
 
-![Demo RAG](docs/demo/demo-rag.gif)
+### ① 通常チャット（RAG モード OFF）
+Claude Haiku 4.5 による通常会話。ストリーミングで回答が流れる。
 
-**Phase 9: RAG モード（Bedrock Knowledge Base 連携）** — サイドバーのトグルで通常チャットと RAG を切り替え。社内ドキュメントを参照した回答と引用元を表示。
+![通常チャット](docs/screenshots/01_chat_normal.png)
 
-![App Demo Phase9 RAG](docs/screenshots/app-demo-phase9-rag.png)
+### ② RAG モード ON・ナレッジベース検索中
+サイドバーのトグルをオンにして「有給休暇の申請方法は？」と質問。社内ドキュメントを検索中の状態。
+
+![RAG モード ON](docs/screenshots/02_rag_mode_on.png)
+
+### ③ RAG 回答＋引用元ドキュメント表示
+Knowledge Base が company_rules.txt を参照し、申請手順を回答。引用元ドキュメントが折りたたみ表示される。
+
+![RAG 回答](docs/screenshots/03_rag_answer.png)
+
+### ④ DynamoDB 会話履歴保存確認
+DynamoDB コンソールで会話履歴（session_id / messages / ttl）が正常に保存されていることを確認。
+
+![DynamoDB 履歴](docs/screenshots/04_history.png)
 
 | 機能 | 説明 |
 |---|---|
