@@ -1,11 +1,15 @@
 import base64
 import json
+import logging
 import os
 import time
 import uuid
 
 import boto3
 import streamlit as st
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.WARNING)
 
 # ── ページ設定 ────────────────────────────────────────────
 st.set_page_config(
@@ -60,8 +64,8 @@ def load_history(session_id: str) -> list[dict]:
         )
         if "Item" in response:
             return json.loads(response["Item"]["messages"]["S"])
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("DynamoDB から会話履歴の読み込みに失敗しました: %s", e)
     return []
 
 
@@ -80,8 +84,8 @@ def save_history(session_id: str, messages: list[dict]) -> None:
                 "ttl": {"N": str(ttl)},
             },
         )
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("DynamoDB への会話履歴の保存に失敗しました: %s", e)
 
 
 # ── Knowledge Base RAG 回答生成 ───────────────────────────
