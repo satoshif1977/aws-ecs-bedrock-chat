@@ -1,7 +1,6 @@
 # aws-ecs-bedrock-chat
 
 ![CI](https://github.com/satoshif1977/aws-ecs-bedrock-chat/actions/workflows/deploy.yml/badge.svg)
-[![codecov](https://codecov.io/gh/satoshif1977/aws-ecs-bedrock-chat/branch/master/graph/badge.svg)](https://codecov.io/gh/satoshif1977/aws-ecs-bedrock-chat)
 ![AWS](https://img.shields.io/badge/AWS-232F3E?style=flat&logo=amazon-aws&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)
 ![Terraform](https://img.shields.io/badge/Terraform-623CE4?style=flat&logo=terraform&logoColor=white)
@@ -250,7 +249,6 @@ GitHub Actions で Python Lint・テスト・Docker ビルド・Terraform 静的
 | ジョブ | 内容 |
 |---|---|
 | ruff / black | Python コードの構文・フォーマットチェック |
-| pytest + Codecov | ユニットテスト実行・カバレッジ計測 |
 | Docker Build | Dockerfile の正常ビルド確認 |
 | terraform fmt / validate | Terraform フォーマット・構文チェック |
 | Checkov セキュリティスキャン | IaC のセキュリティポリシー違反を検出（soft_fail: false） |
@@ -381,6 +379,25 @@ terraform plan -destroy
 | **カスタム Skills** | Terraform / Python / AWS に特化した Skills を設定・継続的に更新。自分の技術スタックに最適化したワークフローを構築 |
 
 > AI を「使う」だけでなく、自分の業務・技術スタックに合わせて**設定・運用・改善し続ける**ことを意識しています。
+
+---
+
+## 学習で気づいたこと・躓いたポイント
+
+### ECS / Docker
+
+- **Docker イメージのアーキテクチャ不一致**: ローカル（Apple M1 など ARM）で `docker build` したイメージを ECS（x86）に push すると実行時にエラーになる。`docker buildx build --platform linux/amd64` でプラットフォームを明示してビルドする。
+- **ECS タスク起動中に ALB の DNS にアクセスしても 503**: ECS タスクが起動して ALB ターゲットグループの `healthy` になるまで 30〜60 秒かかる。`wait services-stable` で待機するか、ヘルスチェックの猶予期間（`health_check_grace_period_seconds`）を適切に設定する。
+- **`lifecycle { ignore_changes = [task_definition] }` は CI/CD には必須**: CI で `force-new-deployment` する設計では ECS Service の `task_definition` が毎回変わるため、Terraform の差分が永久に出続ける。`ignore_changes` で抑制する。
+
+### Bedrock / クロスリージョン推論
+
+- **推論プロファイルの IAM 権限は 2 種類必要**: `on-demand throughput` 非対応モデルはクロスリージョン推論プロファイル ARN (`jp.*`) **と** 基盤モデル ARN の両方を IAM で許可しないと `AccessDeniedException` になる。どちらか片方だけでは動かない。
+- **`InvokeModel` と `InvokeModelWithResponseStream` は別の IAM アクション**: ストリーミングを使う場合は `bedrock:InvokeModelWithResponseStream` も明示的に追加が必要。
+
+### OIDC / GitHub Actions
+
+- **OIDC Provider はアカウントグローバルリソース**: `aws_iam_openid_connect_provider` は 1 アカウントに 1 つしか作れない。複数プロジェクトで共用する場合は `data` ソースで参照し、`terraform destroy` で削除しないよう注意。
 
 ---
 
