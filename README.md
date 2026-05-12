@@ -241,6 +241,47 @@ terraform destroy
 
 ---
 
+## トラブルシューティング
+
+| 症状 | 原因 | 対処法 |
+|---|---|---|
+| ECS タスクが起動しない（`STOPPED`） | Docker イメージのアーキテクチャ不一致（ARM/x86） | `docker buildx build --platform linux/amd64` でビルドし直す |
+| ALB が `503` を返す | ECS タスクが healthy になる前にアクセス | タスク起動から 30〜60 秒待ってから再アクセス |
+| `AccessDeniedException` on Bedrock | 推論プロファイルの IAM 権限不足 | Task Role に `bedrock:InvokeModel` と `bedrock:InvokeModelWithResponseStream` の両方を付与 |
+| 会話履歴がリセットされる | `session_id` が URL に付与されていない | ブラウザの URL に `?session_id=xxxx` が含まれているか確認 |
+| CI/CD 後にデプロイが反映されない | ECR push または `force-new-deployment` が失敗 | `gh run view` で Actions ログを確認し、ECR push が成功しているか確認 |
+
+---
+
+## ローカル開発・テスト方法
+
+### Streamlit をローカルで起動（ECS なし）
+
+```bash
+cd app
+pip install -r requirements.txt
+aws-vault exec personal-dev-source -- streamlit run app.py
+# http://localhost:8501 でアクセス
+```
+
+### Docker ビルドのローカル確認
+
+```bash
+# x86_64 向けにビルドして動作確認
+docker buildx build --platform linux/amd64 -t bedrock-chat ./app
+docker run -p 8501:8501 bedrock-chat
+```
+
+### ユニットテストの実行
+
+```bash
+cd app
+pip install pytest
+pytest tests/ -v
+```
+
+---
+
 ## CI / セキュリティスキャン
 
 GitHub Actions で Python Lint・テスト・Docker ビルド・Terraform 静的解析（Checkov）を自動実行しています。
