@@ -171,6 +171,23 @@ cp environments/dev/terraform.tfvars.example environments/dev/terraform.tfvars
 # terraform.tfvars を編集して ecr_image_uri を実際の URI に変更
 ```
 
+### 環境変数（terraform.tfvars 設定項目）
+
+`environments/dev/terraform.tfvars.example` をコピーして以下の値を設定します。
+
+| 変数名 | デフォルト値 | 説明 |
+|---|---|---|
+| `project` | `"ecs-bedrock-chat"` | リソース命名プレフィックス |
+| `env` | `"dev"` | 環境名 |
+| `aws_region` | `"ap-northeast-1"` | デプロイリージョン |
+| `ecr_image_uri` | **要変更** | ECR push 済みイメージ URI（`<account_id>.dkr.ecr.<region>.amazonaws.com/<repo>:latest`） |
+| `task_cpu` | `256` | Fargate タスク CPU（0.25 vCPU） |
+| `task_memory` | `512` | Fargate タスクメモリ（0.5 GB） |
+| `container_port` | `8501` | Streamlit デフォルトポート |
+| `log_retention_days` | `7` | CloudWatch Logs 保持期間（日） |
+| `desired_count` | `1` | ECS Service 起動タスク数（検証時は 1 で最小コスト） |
+| `github_repo` | **要変更** | GitHub Actions OIDC 連携用リポジトリ（`owner/repo` 形式） |
+
 ### 3. Terraform apply
 
 ```bash
