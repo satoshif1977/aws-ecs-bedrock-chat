@@ -188,6 +188,19 @@ cp environments/dev/terraform.tfvars.example environments/dev/terraform.tfvars
 | `desired_count` | `1` | ECS Service 起動タスク数（検証時は 1 で最小コスト） |
 | `github_repo` | **要変更** | GitHub Actions OIDC 連携用リポジトリ（`owner/repo` 形式） |
 
+### ECS タスク環境変数（コンテナ側）
+
+ECS タスク定義に設定される環境変数です（Terraform が自動で注入）。
+
+| 環境変数名 | デフォルト値 | 説明 |
+|---|---|---|
+| `BEDROCK_MODEL_ID` | `jp.anthropic.claude-haiku-4-5-20251001-v1:0` | 使用する Claude モデルの推論プロファイル ID |
+| `AWS_REGION` | `ap-northeast-1` | Bedrock / DynamoDB のリージョン（Lambda 予約変数） |
+| `DYNAMODB_TABLE_NAME` | Terraform が自動設定 | 会話履歴テーブル名（`<project>-<env>-chat-history`） |
+| `KNOWLEDGE_BASE_ID` | Terraform が自動設定 | Bedrock Knowledge Base ID（未設定時は RAG モード無効） |
+
+> **補足**: `KNOWLEDGE_BASE_ID` が空の場合、サイドバーの RAG トグルは非表示になり通常チャットモードで動作します。
+
 ### 3. Terraform apply
 
 ```bash
