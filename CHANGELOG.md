@@ -1,0 +1,52 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+## [Unreleased]
+
+## [1.4.0] - 2026-05-19
+
+### Added
+- CONTRIBUTING.md 追加（PR プロセス・スタイルガイド）
+
+## [1.3.0] - 2026-05-18
+
+### Added
+- ECS タスク環境変数テーブルを README に追加
+
+### Changed
+- `MODEL_ID` / `REGION` を環境変数から取得可能に変更（ハードコード解消）
+
+## [1.2.0] - 2026-05-12
+
+### Added
+- SECURITY.md 追加
+- pyproject.toml 追加（pytest + ruff 設定）
+- Dependabot 設定追加
+- README にトラブルシューティング・ローカル開発テスト方法セクション追加
+
+### Changed
+- Claude 3 Haiku → Claude 3.5 Haiku（`anthropic.claude-3-5-haiku-20241022-v1:0`）に移行（EOL: 2026-09-10）
+- `.gitignore` に `.ruff_cache` / `.pytest_cache` を追加
+
+## [1.1.0] - 2026-04-13
+
+### Added
+- Phase 9: Bedrock Knowledge Base RAG 連携を追加
+  - `RetrieveAndGenerate` API で Streamlit チャット画面に RAG モード追加
+  - タスクロールに `InvokeModel` 権限を追加
+  - AWS4 スタイルのアーキテクチャ構成図を更新
+
+### Fixed
+- RAG モデル ARN を推論プロファイル形式（`us.anthropic.claude-3-haiku-*`）に修正
+
+## [1.0.0] - 2026-03-25
+
+### Added
+- 初回実装：ECS/Fargate + Amazon Bedrock（Claude 3 Haiku）チャットアプリ
+  - Phase 1〜5: Streamlit チャット UI・Dockerfile・ECS/Fargate デプロイ
+  - Phase 6: DynamoDB 会話履歴連携
+  - Phase 7: ストリーミングレスポンス対応（`InvokeModelWithResponseStream`）
+  - Phase 8: GitHub Actions CI/CD パイプライン追加
+- Terraform IaC（ECS / Fargate / ALB / DynamoDB / IAM / CloudWatch Logs）
+- GitHub Actions CI（Docker build + Checkov セキュリティスキャン）
