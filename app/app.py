@@ -19,7 +19,9 @@ st.set_page_config(
 )
 
 # ── 定数 ─────────────────────────────────────────────────
-MODEL_ID = os.environ.get("BEDROCK_MODEL_ID", "jp.anthropic.claude-haiku-4-5-20251001-v1:0")
+MODEL_ID = os.environ.get(
+    "BEDROCK_MODEL_ID", "jp.anthropic.claude-haiku-4-5-20251001-v1:0"
+)
 REGION = os.environ.get("AWS_REGION", "ap-northeast-1")
 MAX_TOKENS = 1024
 HISTORY_TTL_DAYS = 7
