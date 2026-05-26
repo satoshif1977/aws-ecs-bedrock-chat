@@ -131,10 +131,12 @@ aws-ecs-bedrock-chat/
 │   ├── ecs/                 # Cluster / Task Definition / Service
 │   ├── iam/                 # Task Execution Role / Task Role
 │   ├── dynamodb/            # 会話履歴テーブル（PAY_PER_REQUEST / TTL）
+│   ├── cicd/                # GitHub Actions OIDC / IAM ロール
 │   └── knowledgebase/       # Bedrock Knowledge Base / OpenSearch Serverless / S3
+├── knowledge_docs/          # RAG 用ドキュメント（company_rules.txt 等）
 └── docs/
-    ├── architecture.drawio
-    ├── architecture.drawio.png
+    ├── ecs-bedrock-chat-architecture.drawio
+    ├── ecs-bedrock-chat-architecture.drawio.png
     └── screenshots/
 ```
 
