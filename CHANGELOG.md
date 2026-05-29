@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-05-29
+
+### Changed
+- デフォルトブランチを `master` → `main` に統一・`master` ブランチ削除
+- CI ワークフロー（`deploy.yml`）のブランチ指定を `main` のみに修正
+- Dependabot: `hashicorp/aws` v5→v6（`terraform plan 0c/0d` 確認済み）・`hashicorp/time` v0.13→v0.14・`python` 3.11-slim→3.14-slim・`streamlit` >=1.57.0・`boto3` >=1.43.14 を更新
+- Dependabot: `actions/checkout` v6・`actions/setup-python` v6・`hashicorp/setup-terraform` v4・`codecov/codecov-action` v6 を更新
+
 ## [1.4.1] - 2026-05-26
 
 ### Fixed
