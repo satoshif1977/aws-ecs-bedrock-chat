@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-06-01
+
+### Changed
+- Bedrock モデルを `Claude 3.5 Haiku`（ap-northeast-1 で使用不可）→ `Claude Haiku 4.5` に更新
+  - `retrieve_and_generate()` 用: `anthropic.claude-haiku-4-5-20251001-v1:0`（基盤モデル ARN 直指定）
+  - IAM ポリシーから廃止モデル ARN を削除
+
 ## [1.5.0] - 2026-05-29
 
 ### Changed
