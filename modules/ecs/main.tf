@@ -60,6 +60,7 @@ resource "aws_ecs_task_definition" "this" {
     # コンテナ内の環境変数
     environment = [
       { name = "AWS_DEFAULT_REGION", value = var.region },
+      { name = "BEDROCK_MODEL_ID", value = var.bedrock_model_id },
       { name = "DYNAMODB_TABLE_NAME", value = var.dynamodb_table_name },
       { name = "KNOWLEDGE_BASE_ID", value = var.knowledge_base_id }
     ]

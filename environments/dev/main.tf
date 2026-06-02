@@ -132,6 +132,7 @@ module "ecs" {
   subnet_ids                 = module.vpc.public_subnet_ids
   ecs_task_security_group_id = module.sg.ecs_task_security_group_id
   alb_target_group_arn       = module.alb.target_group_arn
+  bedrock_model_id           = "jp.anthropic.claude-haiku-4-5-20251001-v1:0"
   dynamodb_table_name        = module.dynamodb.table_name
   knowledge_base_id          = module.knowledgebase.knowledge_base_id
   tags                       = local.tags

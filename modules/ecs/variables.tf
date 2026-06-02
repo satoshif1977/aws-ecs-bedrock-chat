@@ -84,6 +84,12 @@ variable "alb_target_group_arn" {
 
 # ── Phase 9 追加変数（Knowledge Base 連携）────────────────
 
+variable "bedrock_model_id" {
+  description = "Bedrock モデル ID（コンテナの環境変数 BEDROCK_MODEL_ID に渡す）"
+  type        = string
+  default     = "jp.anthropic.claude-haiku-4-5-20251001-v1:0"
+}
+
 variable "knowledge_base_id" {
   description = "Bedrock Knowledge Base ID（RAG モードで使用。空文字の場合 RAG 無効）"
   type        = string

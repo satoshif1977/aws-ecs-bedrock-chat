@@ -37,6 +37,29 @@ resource "aws_s3_bucket_public_access_block" "knowledge" {
   restrict_public_buckets = true
 }
 
+resource "aws_s3_bucket_server_side_encryption_configuration" "knowledge" {
+  bucket = aws_s3_bucket.knowledge.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "knowledge" {
+  bucket = aws_s3_bucket.knowledge.id
+
+  rule {
+    id     = "abort-incomplete-multipart-uploads"
+    status = "Enabled"
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
+  }
+}
+
 # ── OpenSearch Serverless 暗号化ポリシー ──────────────────
 # コレクションの保存データを AWS マネージドキーで暗号化する
 

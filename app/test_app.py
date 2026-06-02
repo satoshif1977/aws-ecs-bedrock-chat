@@ -76,6 +76,15 @@ class TestSaveHistory:
         # DynamoDB 呼び出しなしで正常終了することを確認
         app.save_history("test-session", [])
 
+    @patch("app.get_dynamodb_client")
+    @patch("app.TABLE_NAME", "test-table")
+    def test_例外発生時はログ出力してスキップされる(self, mock_get_client):
+        mock_client = MagicMock()
+        mock_get_client.return_value = mock_client
+        mock_client.put_item.side_effect = Exception("DynamoDB error")
+        # 例外をキャッチして正常終了することを確認
+        app.save_history("test-session", [{"role": "user", "content": "test"}])
+
 
 # ── invoke_bedrock_stream テスト ──────────────────────────
 class TestInvokeBedrockStream:
@@ -105,6 +114,17 @@ class TestInvokeBedrockStream:
         result = list(app.invoke_bedrock_stream([]))
         assert result == []
 
+    @patch("app.get_bedrock_client")
+    def test_例外発生時は例外を再送出する(self, mock_get_client):
+        mock_client = MagicMock()
+        mock_get_client.return_value = mock_client
+        mock_client.invoke_model_with_response_stream.side_effect = Exception("Bedrock stream error")
+        try:
+            list(app.invoke_bedrock_stream([{"role": "user", "content": "Hi"}]))
+            assert False, "例外が発生するはず"
+        except Exception as e:
+            assert "Bedrock stream error" in str(e)
+
 
 # ── invoke_rag テスト ─────────────────────────────────────
 class TestInvokeRag:
@@ -133,6 +153,17 @@ class TestInvokeRag:
         answer, citations = app.invoke_rag("質問")
         assert answer == "回答"
         assert citations == []
+
+    @patch("app.get_bedrock_agent_runtime_client")
+    def test_例外発生時は例外を再送出する(self, mock_get_client):
+        mock_client = MagicMock()
+        mock_get_client.return_value = mock_client
+        mock_client.retrieve_and_generate.side_effect = Exception("Bedrock RAG error")
+        try:
+            app.invoke_rag("質問")
+            assert False, "例外が発生するはず"
+        except Exception as e:
+            assert "Bedrock RAG error" in str(e)
 
 
 # ── build_multimodal_content テスト ──────────────────────
