@@ -118,7 +118,9 @@ class TestInvokeBedrockStream:
     def test_例外発生時は例外を再送出する(self, mock_get_client):
         mock_client = MagicMock()
         mock_get_client.return_value = mock_client
-        mock_client.invoke_model_with_response_stream.side_effect = Exception("Bedrock stream error")
+        mock_client.invoke_model_with_response_stream.side_effect = Exception(
+            "Bedrock stream error"
+        )
         try:
             list(app.invoke_bedrock_stream([{"role": "user", "content": "Hi"}]))
             raise AssertionError("例外が発生するはず")
