@@ -121,7 +121,9 @@ class TestInvokeBedrockStream:
         mock_client.invoke_model_with_response_stream.side_effect = Exception("Bedrock stream error")
         try:
             list(app.invoke_bedrock_stream([{"role": "user", "content": "Hi"}]))
-            assert False, "例外が発生するはず"
+            raise AssertionError("例外が発生するはず")
+        except AssertionError:
+            raise
         except Exception as e:
             assert "Bedrock stream error" in str(e)
 
@@ -161,7 +163,9 @@ class TestInvokeRag:
         mock_client.retrieve_and_generate.side_effect = Exception("Bedrock RAG error")
         try:
             app.invoke_rag("質問")
-            assert False, "例外が発生するはず"
+            raise AssertionError("例外が発生するはず")
+        except AssertionError:
+            raise
         except Exception as e:
             assert "Bedrock RAG error" in str(e)
 
