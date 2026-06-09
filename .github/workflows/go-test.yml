@@ -1,0 +1,53 @@
+name: Go Test
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "lambda_go/**"
+      - ".github/workflows/go-test.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "lambda_go/**"
+      - ".github/workflows/go-test.yml"
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  test:
+    name: Go ビルド・テスト
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: lambda_go/healthcheck
+
+    steps:
+      # ── 1. ソースコード取得 ──────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      # ── 2. Go セットアップ ───────────────────────────────────
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: lambda_go/healthcheck/go.mod
+          cache-dependency-path: lambda_go/healthcheck/go.sum
+
+      # ── 3. 依存パッケージ取得 ────────────────────────────────
+      - name: Download modules
+        run: go mod download
+
+      # ── 4. ビルド確認 ────────────────────────────────────────
+      - name: Build
+        run: go build ./...
+
+      # ── 5. テスト実行 ────────────────────────────────────────
+      - name: Test
+        run: go test ./... -v -race -count=1
+
+      # ── 6. vet（静的解析）────────────────────────────────────
+      - name: Vet
+        run: go vet ./...
