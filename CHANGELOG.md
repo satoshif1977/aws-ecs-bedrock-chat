@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-06-09
+
+### Added
+- `lambda_go/healthcheck/`: ECS サービス / ALB ターゲットグループ / DynamoDB テーブルのヘルス状態を確認する Go Lambda 関数
+  - AWS SDK Go v2 使用・interface によるモック設計でテスト容易性を確保
+  - 環境変数: `ECS_CLUSTER_NAME` / `ECS_SERVICE_NAME` / `ALB_TARGET_GROUP_ARN` / `DYNAMODB_TABLE_NAME`
+  - `main_test.go`: モックを使ったユニットテスト 14 件
+- `.github/workflows/go-test.yml`: Go CI（build + test -race + vet）
+
 ## [1.6.0] - 2026-06-01
 
 ### Changed
