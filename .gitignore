@@ -21,3 +21,8 @@ __pycache__/
 
 # Ruff cache
 .ruff_cache/
+
+# Node.js / TypeScript
+node_modules/
+dist/
+coverage/

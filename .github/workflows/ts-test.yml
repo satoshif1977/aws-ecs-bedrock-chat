@@ -1,0 +1,47 @@
+name: TypeScript Test
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - "lambda_ts/**"
+      - ".github/workflows/ts-test.yml"
+  pull_request:
+    branches: [main, master]
+    paths:
+      - "lambda_ts/**"
+      - ".github/workflows/ts-test.yml"
+
+jobs:
+  test:
+    name: TypeScript ビルド・テスト
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: lambda_ts/ecs-notifier
+
+    steps:
+      # ── 1. ソースコード取得 ──────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      # ── 2. Node.js セットアップ ──────────────────────────────
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: lambda_ts/ecs-notifier/package-lock.json
+
+      # ── 3. 依存パッケージインストール ────────────────────────
+      - name: Install dependencies
+        run: npm ci
+
+      # ── 4. 型チェック ─────────────────────────────────────────
+      - name: TypeScript type check
+        run: npx tsc --noEmit
+
+      # ── 5. テスト実行 ─────────────────────────────────────────
+      - name: Test
+        run: npm test
