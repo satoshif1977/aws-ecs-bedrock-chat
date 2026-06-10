@@ -4,6 +4,8 @@
 [![codecov](https://codecov.io/gh/satoshif1977/aws-ecs-bedrock-chat/graph/badge.svg)](https://codecov.io/gh/satoshif1977/aws-ecs-bedrock-chat)
 ![AWS](https://img.shields.io/badge/AWS-232F3E?style=flat&logo=amazon-aws&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white)
+![Go](https://img.shields.io/badge/Go-00ADD8?style=flat&logo=go&logoColor=white)
 ![Terraform](https://img.shields.io/badge/Terraform-623CE4?style=flat&logo=terraform&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white)
 ![Claude Code](https://img.shields.io/badge/Built%20with-Claude%20Code-orange?logo=anthropic)
@@ -98,6 +100,8 @@ AWS 認定バッジ画像を Claude Haiku 4.5 がマルチモーダル API で�
 | カテゴリ | 技術 |
 |---|---|
 | アプリ | Python 3.11 / Streamlit / boto3 |
+| Lambda（TypeScript） | ECS タスク状態変更 → SNS 通知（AWS SDK v3 / Jest テスト 23 件） |
+| Lambda（Go） | ECS / ALB / DynamoDB ヘルスチェック（AWS SDK v2 / Go テスト 12 件） |
 | コンテナ | Docker / Amazon ECR |
 | オーケストレーション | Amazon ECS / AWS Fargate |
 | ロードバランサー | Application Load Balancer（Multi-AZ） |
@@ -133,6 +137,15 @@ aws-ecs-bedrock-chat/
 │   ├── dynamodb/            # 会話履歴テーブル（PAY_PER_REQUEST / TTL）
 │   ├── cicd/                # GitHub Actions OIDC / IAM ロール
 │   └── knowledgebase/       # Bedrock Knowledge Base / OpenSearch Serverless / S3
+├── lambda_ts/
+│   └── ecs-notifier/        # TypeScript Lambda: ECS タスク状態変更 → SNS 通知
+│       ├── src/index.ts     # ハンドラー（EventBridge → SNS publishNotification）
+│       ├── src/index.test.ts# Jest テスト 23 件（カバレッジ 100%）
+│       └── package.json
+├── lambda_go/
+│   └── healthcheck/         # Go Lambda: ECS / ALB / DynamoDB ヘルスチェック
+│       ├── main.go          # Checker 構造体（interface モック対応）
+│       └── main_test.go     # Go テスト 12 件
 ├── knowledge_docs/          # RAG 用ドキュメント（company_rules.txt 等）
 └── docs/
     ├── ecs-bedrock-chat-architecture.drawio
@@ -323,6 +336,8 @@ GitHub Actions で Python Lint・テスト・Docker ビルド・Terraform 静的
 | ジョブ | 内容 |
 |---|---|
 | ruff / black | Python コードの構文・フォーマットチェック |
+| Go Test | Go Lambda のビルド・テスト・vet（`lambda_go/` 変更時） |
+| TypeScript Test | 型チェック（`tsc --noEmit`）＋ Jest テスト（`lambda_ts/` 変更時） |
 | Docker Build | Dockerfile の正常ビルド確認 |
 | terraform fmt / validate | Terraform フォーマット・構文チェック |
 | Checkov セキュリティスキャン | IaC のセキュリティポリシー違反を検出（soft_fail: false） |
