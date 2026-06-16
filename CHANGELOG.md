@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-06-16
+
+### Changed
+- hashicorp/aws 6.47.0 → 6.50.0
+- boto3 >=1.43.18 → >=1.43.29
+- python base image 3.11-slim → 3.14-slim
+- actions/setup-node v4 → v6
+- actions/setup-go v5 → v6
+- codecov/codecov-action v6 → v7
+
+
 ## [1.7.0] - 2026-06-09
 
 ### Added
