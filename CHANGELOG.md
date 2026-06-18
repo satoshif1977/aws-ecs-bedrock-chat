@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-06-18
+
+### Added
+- README に Go Test CI バッジ・TS Test CI バッジを追加
+
 ## [1.8.0] - 2026-06-16
 
 ### Changed
