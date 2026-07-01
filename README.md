@@ -335,14 +335,14 @@ GitHub Actions で Python Lint・テスト・Docker ビルド・Terraform 静的
 
 ### 実施内容
 
-| ジョブ | 内容 |
-|---|---|
-| ruff / black | Python コードの構文・フォーマットチェック |
-| Go Test | Go Lambda のビルド・テスト・vet（`lambda_go/` 変更時） |
-| TypeScript Test | 型チェック（`tsc --noEmit`）＋ Jest テスト（`lambda_ts/` 変更時） |
-| Docker Build | Dockerfile の正常ビルド確認 |
-| terraform fmt / validate | Terraform フォーマット・構文チェック |
-| Checkov セキュリティスキャン | IaC のセキュリティポリシー違反を検出（soft_fail: false） |
+| ジョブ | ワークフロー | 内容 |
+|---|---|---|
+| ruff / black | deploy.yml | Python コードの構文・フォーマットチェック |
+| Go ユニットテスト | go-test.yml | lambda_go/healthcheck 14 件（AWS 接続不要） |
+| TypeScript 型チェック + Jest | ts-test.yml | tsc --noEmit + lambda_ts/ecs-notifier 23 件（AWS 接続不要） |
+| Docker Build | deploy.yml | Dockerfile の正常ビルド確認 |
+| terraform fmt / validate | deploy.yml | Terraform フォーマット・構文チェック |
+| Checkov セキュリティスキャン | deploy.yml | IaC のセキュリティポリシー違反を検出（soft_fail: false） |
 
 ### 意図的にスキップしている項目（dev / PoC の合理的な省略）
 
