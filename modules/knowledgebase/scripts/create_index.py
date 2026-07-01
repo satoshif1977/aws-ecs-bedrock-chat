@@ -11,7 +11,6 @@ Terraform の null_resource local-exec / 手動実行 の両方に対応。
   INDEX_NAME          - 作成するインデックス名
 """
 
-import json
 import os
 import sys
 

@@ -36,6 +36,7 @@ ecs = boto3.client("ecs", region_name=REGION)
 
 # ── ヘルパー関数 ──────────────────────────────────────────────
 
+
 def get_service_info(cluster: str, service: str) -> dict[str, Any]:
     """ECS サービスの状態を取得する。"""
     response = ecs.describe_services(cluster=cluster, services=[service])
@@ -56,7 +57,9 @@ def get_service_info(cluster: str, service: str) -> dict[str, Any]:
 
 def get_running_tasks(cluster: str, service: str) -> list[dict[str, Any]]:
     """実行中タスクの一覧と状態を取得する。"""
-    response = ecs.list_tasks(cluster=cluster, serviceName=service, desiredStatus="RUNNING")
+    response = ecs.list_tasks(
+        cluster=cluster, serviceName=service, desiredStatus="RUNNING"
+    )
     task_arns = response.get("taskArns", [])
     if not task_arns:
         return []
@@ -72,13 +75,15 @@ def get_running_tasks(cluster: str, service: str) -> list[dict[str, Any]]:
             }
             for c in t.get("containers", [])
         ]
-        tasks.append({
-            "taskId": t["taskArn"].split("/")[-1],
-            "lastStatus": t["lastStatus"],
-            "healthStatus": t.get("healthStatus", "UNKNOWN"),
-            "startedAt": str(t.get("startedAt", "N/A")),
-            "containers": containers,
-        })
+        tasks.append(
+            {
+                "taskId": t["taskArn"].split("/")[-1],
+                "lastStatus": t["lastStatus"],
+                "healthStatus": t.get("healthStatus", "UNKNOWN"),
+                "startedAt": str(t.get("startedAt", "N/A")),
+                "containers": containers,
+            }
+        )
     return tasks
 
 
@@ -114,7 +119,9 @@ def health_check(cluster: str, service: str) -> bool:
             )
             ok = False
         else:
-            print(f"\n  [OK] running={info['runningCount']} / desired={info['desiredCount']}")
+            print(
+                f"\n  [OK] running={info['runningCount']} / desired={info['desiredCount']}"
+            )
 
     except (ClientError, ValueError) as e:
         print(f"  [ERROR] サービス取得失敗: {e}")
@@ -157,8 +164,9 @@ def health_check(cluster: str, service: str) -> bool:
 
 # ── エントリーポイント ────────────────────────────────────────
 
+
 def main() -> None:
-    print(f"ECS ヘルスチェック開始")
+    print("ECS ヘルスチェック開始")
     print(f"  クラスター : {CLUSTER}")
     print(f"  サービス   : {SERVICE}")
     print(f"  リージョン : {REGION}")
