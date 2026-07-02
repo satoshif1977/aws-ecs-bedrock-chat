@@ -6,8 +6,12 @@ boto3 をモックして AWS 接続なしで各関数を検証する。
 
 from __future__ import annotations
 
+import os
 import sys
 from unittest.mock import MagicMock, patch
+
+# scripts/ ディレクトリを sys.path に追加（CI 上でも直接 import できるように）
+sys.path.insert(0, os.path.dirname(__file__))
 
 # ── boto3 をモック（モジュールレベルの boto3.client 呼び出しを回避） ──────
 _mock_boto3 = MagicMock()
@@ -27,7 +31,7 @@ import botocore.exceptions  # noqa: E402
 
 botocore.exceptions.ClientError = _ClientError  # type: ignore[attr-defined]
 
-import scripts.health_check as hc  # noqa: E402
+import health_check as hc  # noqa: E402
 
 # ── get_service_info テスト ────────────────────────────────────────────────
 
