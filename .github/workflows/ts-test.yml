@@ -2,12 +2,12 @@ name: TypeScript Test
 
 on:
   push:
-    branches: [main, master]
+    branches: [main]
     paths:
       - "lambda_ts/**"
       - ".github/workflows/ts-test.yml"
   pull_request:
-    branches: [main, master]
+    branches: [main]
     paths:
       - "lambda_ts/**"
       - ".github/workflows/ts-test.yml"
