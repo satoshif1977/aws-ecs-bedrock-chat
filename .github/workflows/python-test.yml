@@ -33,4 +33,4 @@ jobs:
         run: black --check app/ scripts/ modules/
 
       - name: pytest
-        run: pytest app/test_app.py -v --tb=short
+        run: pytest app/test_app.py scripts/test_health_check.py -v --tb=short
