@@ -324,3 +324,231 @@ func TestCheckDynamoDB_APIError(t *testing.T) {
 		t.Error("expected error, got nil")
 	}
 }
+
+// ── CheckECS 追加ケース ───────────────────────────────────────
+
+func TestCheckECS_DesiredZero(t *testing.T) {
+	// DesiredCount=0 のときは ACTIVE でも Healthy=false になること
+	checker := &Checker{
+		ecsCli: &mockECSClient{
+			output: &ecs.DescribeServicesOutput{
+				Services: []ecstypes.Service{
+					{Status: aws.String("ACTIVE"), RunningCount: 0, DesiredCount: 0},
+				},
+			},
+		},
+	}
+	result, err := checker.CheckECS(context.Background(), "cluster", "service")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Healthy {
+		t.Error("expected Healthy=false when DesiredCount=0")
+	}
+}
+
+func TestCheckECS_ClusterAndServiceNamePreserved(t *testing.T) {
+	// ClusterName / ServiceName がレスポンスに保持されること
+	checker := &Checker{
+		ecsCli: &mockECSClient{
+			output: &ecs.DescribeServicesOutput{
+				Services: []ecstypes.Service{
+					{Status: aws.String("ACTIVE"), RunningCount: 1, DesiredCount: 1},
+				},
+			},
+		},
+	}
+	result, err := checker.CheckECS(context.Background(), "my-cluster", "my-service")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.ClusterName != "my-cluster" {
+		t.Errorf("ClusterName: got %q, want my-cluster", result.ClusterName)
+	}
+	if result.ServiceName != "my-service" {
+		t.Errorf("ServiceName: got %q, want my-service", result.ServiceName)
+	}
+}
+
+func TestCheckECS_OnlyClusterEmpty(t *testing.T) {
+	// clusterName が空なら serviceName があっても nil を返すこと
+	checker := &Checker{ecsCli: &mockECSClient{}}
+	result, err := checker.CheckECS(context.Background(), "", "some-service")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result != nil {
+		t.Error("expected nil when clusterName is empty")
+	}
+}
+
+func TestCheckECS_TableDriven(t *testing.T) {
+	tests := []struct {
+		name        string
+		status      string
+		running     int32
+		desired     int32
+		wantHealthy bool
+	}{
+		{"ACTIVE running=desired", "ACTIVE", 2, 2, true},
+		{"ACTIVE running<desired", "ACTIVE", 0, 2, false},
+		{"INACTIVE desired=0", "INACTIVE", 0, 0, false},
+		{"ACTIVE desired=0", "ACTIVE", 0, 0, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			checker := &Checker{
+				ecsCli: &mockECSClient{
+					output: &ecs.DescribeServicesOutput{
+						Services: []ecstypes.Service{
+							{Status: aws.String(tt.status), RunningCount: tt.running, DesiredCount: tt.desired},
+						},
+					},
+				},
+			}
+			result, err := checker.CheckECS(context.Background(), "cluster", "service")
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if result.Healthy != tt.wantHealthy {
+				t.Errorf("Healthy: got %v, want %v", result.Healthy, tt.wantHealthy)
+			}
+		})
+	}
+}
+
+// ── CheckALB 追加ケース ───────────────────────────────────────
+
+func TestCheckALB_EmptyTargets(t *testing.T) {
+	// ターゲット0件のときは AllHealthy=true（デフォルト）であること
+	checker := &Checker{
+		elbv2: &mockELBV2Client{
+			output: &elasticloadbalancingv2.DescribeTargetHealthOutput{
+				TargetHealthDescriptions: []elbv2types.TargetHealthDescription{},
+			},
+		},
+	}
+	result, err := checker.CheckALB(context.Background(), "arn:aws:elasticloadbalancing:ap-northeast-1:123456789012:targetgroup/test/abc")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result.AllHealthy {
+		t.Error("expected AllHealthy=true for empty targets")
+	}
+	if len(result.Targets) != 0 {
+		t.Errorf("expected 0 targets, got %d", len(result.Targets))
+	}
+}
+
+func TestCheckALB_MixedHealth(t *testing.T) {
+	// 健全1台・不健全1台が混在する場合は AllHealthy=false になること
+	checker := &Checker{
+		elbv2: &mockELBV2Client{
+			output: &elasticloadbalancingv2.DescribeTargetHealthOutput{
+				TargetHealthDescriptions: []elbv2types.TargetHealthDescription{
+					{
+						Target:       &elbv2types.TargetDescription{Id: aws.String("10.0.1.1"), Port: aws.Int32(8080)},
+						TargetHealth: &elbv2types.TargetHealth{State: elbv2types.TargetHealthStateEnumHealthy},
+					},
+					{
+						Target:       &elbv2types.TargetDescription{Id: aws.String("10.0.1.2"), Port: aws.Int32(8080)},
+						TargetHealth: &elbv2types.TargetHealth{State: elbv2types.TargetHealthStateEnumUnhealthy},
+					},
+				},
+			},
+		},
+	}
+	result, err := checker.CheckALB(context.Background(), "arn:aws:elasticloadbalancing:ap-northeast-1:123456789012:targetgroup/test/abc")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.AllHealthy {
+		t.Error("expected AllHealthy=false for mixed health targets")
+	}
+	if len(result.Targets) != 2 {
+		t.Errorf("expected 2 targets, got %d", len(result.Targets))
+	}
+}
+
+func TestCheckALB_TargetGroupARNPreserved(t *testing.T) {
+	const wantARN = "arn:aws:elasticloadbalancing:ap-northeast-1:999999999999:targetgroup/my-tg/xyz"
+	checker := &Checker{
+		elbv2: &mockELBV2Client{
+			output: &elasticloadbalancingv2.DescribeTargetHealthOutput{},
+		},
+	}
+	result, err := checker.CheckALB(context.Background(), wantARN)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.TargetGroupARN != wantARN {
+		t.Errorf("TargetGroupARN: got %q, want %q", result.TargetGroupARN, wantARN)
+	}
+}
+
+// ── CheckDynamoDB 追加ケース ──────────────────────────────────
+
+func TestCheckDynamoDB_Deleting(t *testing.T) {
+	checker := &Checker{
+		dynoCli: &mockDynamoDBClient{
+			output: &dynamodb.DescribeTableOutput{
+				Table: &dynamodbtypes.TableDescription{TableStatus: dynamodbtypes.TableStatusDeleting},
+			},
+		},
+	}
+	result, err := checker.CheckDynamoDB(context.Background(), "test-table")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Healthy {
+		t.Error("expected Healthy=false for DELETING table")
+	}
+}
+
+func TestCheckDynamoDB_TableNamePreserved(t *testing.T) {
+	checker := &Checker{
+		dynoCli: &mockDynamoDBClient{
+			output: &dynamodb.DescribeTableOutput{
+				Table: &dynamodbtypes.TableDescription{TableStatus: dynamodbtypes.TableStatusActive},
+			},
+		},
+	}
+	result, err := checker.CheckDynamoDB(context.Background(), "my-sessions-table")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.TableName != "my-sessions-table" {
+		t.Errorf("TableName: got %q, want my-sessions-table", result.TableName)
+	}
+}
+
+func TestCheckDynamoDB_TableDriven(t *testing.T) {
+	tests := []struct {
+		name        string
+		status      dynamodbtypes.TableStatus
+		wantHealthy bool
+	}{
+		{"ACTIVE", dynamodbtypes.TableStatusActive, true},
+		{"CREATING", dynamodbtypes.TableStatusCreating, false},
+		{"DELETING", dynamodbtypes.TableStatusDeleting, false},
+		{"UPDATING", dynamodbtypes.TableStatusUpdating, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			checker := &Checker{
+				dynoCli: &mockDynamoDBClient{
+					output: &dynamodb.DescribeTableOutput{
+						Table: &dynamodbtypes.TableDescription{TableStatus: tt.status},
+					},
+				},
+			}
+			result, err := checker.CheckDynamoDB(context.Background(), "test-table")
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if result.Healthy != tt.wantHealthy {
+				t.Errorf("status=%s: Healthy: got %v, want %v", tt.status, result.Healthy, tt.wantHealthy)
+			}
+		})
+	}
+}
