@@ -62,6 +62,12 @@ describe("extractResourceName", () => {
   test("スラッシュを含まない文字列はそのまま返す", () => {
     expect(extractResourceName("plain-name")).toBe("plain-name");
   });
+
+  test("シングルスラッシュ ARN から名前部分を取り出す", () => {
+    expect(
+      extractResourceName("arn:aws:ecs:ap-northeast-1:123:cluster/prod")
+    ).toBe("prod");
+  });
 });
 
 // ── formatMessage ─────────────────────────────────────────────────────────────
@@ -113,6 +119,27 @@ describe("formatMessage", () => {
     const msg = formatMessage(makeDetail());
     expect(msg.split("\n").length).toBeGreaterThanOrEqual(4);
   });
+
+  test("ヘッダー「ECS タスク状態変更」を含む", () => {
+    const msg = formatMessage(makeDetail());
+    expect(msg).toContain("ECS タスク状態変更");
+  });
+
+  test("「クラスター」ラベルを含む", () => {
+    const msg = formatMessage(makeDetail());
+    expect(msg).toContain("クラスター");
+  });
+
+  test("「タスク ID」ラベルを含む", () => {
+    const msg = formatMessage(makeDetail());
+    expect(msg).toContain("タスク ID");
+  });
+
+  test("stoppedReason あり・group なしのとき停止理由行のみ追加される", () => {
+    const msg = formatMessage(makeDetail({ stoppedReason: "OOMKilled" }));
+    expect(msg).toContain("OOMKilled");
+    expect(msg).not.toContain("サービス");
+  });
 });
 
 // ── buildSubject ──────────────────────────────────────────────────────────────
@@ -142,6 +169,18 @@ describe("buildSubject", () => {
 
   test("件名にステータス文字列が含まれる", () => {
     expect(buildSubject("STOPPED")).toContain("STOPPED");
+  });
+
+  test("PENDING は INFO ラベルを含む", () => {
+    expect(buildSubject("PENDING")).toContain("INFO");
+  });
+
+  test("STOPPING は INFO ラベルを含む", () => {
+    expect(buildSubject("STOPPING")).toContain("INFO");
+  });
+
+  test("件名が「[ECS 」で始まる", () => {
+    expect(buildSubject("RUNNING")).toMatch(/^\[ECS /);
   });
 });
 
@@ -180,6 +219,24 @@ describe("publishNotification", () => {
     await expect(
       publishNotification(errorClient, "arn:aws:sns:::topic", "件名", "本文")
     ).rejects.toThrow("SNS unavailable");
+  });
+
+  test("SNS コマンドに正しい TopicArn が設定される", async () => {
+    const { client, calls } = makeMockSns();
+    const topicArn = "arn:aws:sns:ap-northeast-1:123:test-topic";
+    await publishNotification(client, topicArn, "件名", "本文");
+    expect(calls[0].input.TopicArn).toBe(topicArn);
+  });
+
+  test("SNS コマンドに正しい Subject が設定される", async () => {
+    const { client, calls } = makeMockSns();
+    await publishNotification(
+      client,
+      "arn:aws:sns:ap-northeast-1:123:test-topic",
+      "テスト件名",
+      "本文"
+    );
+    expect(calls[0].input.Subject).toBe("テスト件名");
   });
 });
 
@@ -233,5 +290,28 @@ describe("createHandler", () => {
     };
     const h = createHandler(errorClient);
     await expect(h(makeEvent())).rejects.toThrow("connection refused");
+  });
+
+  test("SNS_TOPIC_ARN 未設定のとき messageId が undefined になる", async () => {
+    const { client } = makeMockSns();
+    const h = createHandler(client);
+    const result = await h(makeEvent());
+    expect(result.messageId).toBeUndefined();
+  });
+
+  test("desiredStatus に関係なく published を返す", async () => {
+    process.env.SNS_TOPIC_ARN = "arn:aws:sns:ap-northeast-1:123:test-topic";
+    const { client } = makeMockSns();
+    const h = createHandler(client);
+    const result = await h(makeEvent({ desiredStatus: "STOPPED" }));
+    expect(result.status).toBe("published");
+  });
+
+  test("PROVISIONING イベントを正しく処理する", async () => {
+    process.env.SNS_TOPIC_ARN = "arn:aws:sns:ap-northeast-1:123:test-topic";
+    const { client } = makeMockSns();
+    const h = createHandler(client);
+    const result = await h(makeEvent({ lastStatus: "PROVISIONING" }));
+    expect(result.status).toBe("published");
   });
 });
