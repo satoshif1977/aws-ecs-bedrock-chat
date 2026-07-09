@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-07-10
+
+### Added
+- `ecs-notifier/` TypeScript ユニットテスト 23 件 → 55 件に拡充（詳細ケース・エラー系追加）
+- `lambda_go/healthcheck/` Go ユニットテスト 14 件 → 24 件に拡充
+- `scripts/health_check.py` Python ユニットテスト 13 件追加・Python CI に `scripts/` ディレクトリを追加
+
+### Fixed
+- CI 上での `ModuleNotFoundError` を修正（`scripts.health_check` → `health_check` 直接 import）
+
+### Changed
+- CI: `python-test.yml` / `ts-test.yml` の `branches` を `[main, master]` → `[main]` に統一
+- Dependabot: `hashicorp/aws` バンプ・`boto3` バージョン更新
+
 ## [1.9.0] - 2026-06-18
 
 ### Added
