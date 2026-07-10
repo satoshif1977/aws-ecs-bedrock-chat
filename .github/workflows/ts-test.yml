@@ -45,3 +45,10 @@ jobs:
       # ── 5. テスト実行 ─────────────────────────────────────────
       - name: Test
         run: npm test
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          directory: lambda_ts/ecs-notifier/coverage
+          flags: typescript
+          fail_ci_if_error: false

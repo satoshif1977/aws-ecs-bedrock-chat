@@ -46,8 +46,17 @@ jobs:
 
       # ── 5. テスト実行 ────────────────────────────────────────
       - name: Test
-        run: go test ./... -v -race -count=1
+        run: go test ./... -v -race -count=1 -coverprofile=coverage.out -covermode=atomic
 
       # ── 6. vet（静的解析）────────────────────────────────────
       - name: Vet
         run: go vet ./...
+
+      # ── 7. カバレッジアップロード ────────────────────────────
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: lambda_go/healthcheck/coverage.out
+          flags: go
+          fail_ci_if_error: false
