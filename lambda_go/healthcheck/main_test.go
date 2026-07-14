@@ -552,3 +552,91 @@ func TestCheckDynamoDB_TableDriven(t *testing.T) {
 		})
 	}
 }
+
+// ── CheckECS 追加ケース（挙動文書化） ────────────────────────────────────────
+
+func TestCheckECS_RunningExceedsDesired(t *testing.T) {
+	// Running=3 > Desired=2 のときも ACTIVE かつ Desired>0 なら Healthy=true になること
+	checker := &Checker{
+		ecsCli: &mockECSClient{
+			output: &ecs.DescribeServicesOutput{
+				Services: []ecstypes.Service{
+					{Status: aws.String("ACTIVE"), RunningCount: 3, DesiredCount: 2},
+				},
+			},
+		},
+	}
+	result, err := checker.CheckECS(context.Background(), "cluster", "service")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result.Healthy {
+		t.Error("expected Healthy=true when running > desired and ACTIVE")
+	}
+}
+
+func TestCheckECS_OnlyServiceEmpty(t *testing.T) {
+	// serviceName のみ空のときも nil を返すこと（OnlyClusterEmpty の対称）
+	checker := &Checker{ecsCli: &mockECSClient{}}
+	result, err := checker.CheckECS(context.Background(), "some-cluster", "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result != nil {
+		t.Error("expected nil when serviceName is empty")
+	}
+}
+
+func TestCheckECS_MultipleServicesUsesFirst(t *testing.T) {
+	// DescribeServices が複数サービスを返した場合、先頭（[0]）を使うこと
+	checker := &Checker{
+		ecsCli: &mockECSClient{
+			output: &ecs.DescribeServicesOutput{
+				Services: []ecstypes.Service{
+					{Status: aws.String("ACTIVE"), RunningCount: 2, DesiredCount: 2},
+					{Status: aws.String("INACTIVE"), RunningCount: 0, DesiredCount: 0},
+				},
+			},
+		},
+	}
+	result, err := checker.CheckECS(context.Background(), "cluster", "service")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result.Healthy {
+		t.Error("expected Healthy=true: first service (ACTIVE) should be used")
+	}
+}
+
+// ── CheckALB 追加ケース（挙動文書化） ────────────────────────────────────────
+
+func TestCheckALB_MultipleAllHealthy(t *testing.T) {
+	// 3台全て healthy のとき AllHealthy=true・Targets 件数=3 になること
+	makeTarget := func(ip string) elbv2types.TargetHealthDescription {
+		return elbv2types.TargetHealthDescription{
+			Target:       &elbv2types.TargetDescription{Id: aws.String(ip), Port: aws.Int32(8080)},
+			TargetHealth: &elbv2types.TargetHealth{State: elbv2types.TargetHealthStateEnumHealthy},
+		}
+	}
+	checker := &Checker{
+		elbv2: &mockELBV2Client{
+			output: &elasticloadbalancingv2.DescribeTargetHealthOutput{
+				TargetHealthDescriptions: []elbv2types.TargetHealthDescription{
+					makeTarget("10.0.1.1"),
+					makeTarget("10.0.1.2"),
+					makeTarget("10.0.1.3"),
+				},
+			},
+		},
+	}
+	result, err := checker.CheckALB(context.Background(), "arn:aws:elasticloadbalancing:ap-northeast-1:123456789012:targetgroup/test/abc")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result.AllHealthy {
+		t.Error("expected AllHealthy=true for 3 healthy targets")
+	}
+	if len(result.Targets) != 3 {
+		t.Errorf("expected 3 targets, got %d", len(result.Targets))
+	}
+}
