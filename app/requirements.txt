@@ -1,2 +1,2 @@
-streamlit>=1.59.1
+streamlit>=1.59.2
 boto3>=1.43.50
