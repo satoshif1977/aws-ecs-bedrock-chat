@@ -28,7 +28,7 @@ jobs:
 
       # ── 2. Node.js セットアップ ──────────────────────────────
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: "20"
           cache: "npm"
