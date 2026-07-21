@@ -21,7 +21,6 @@ if "streamlit" not in sys.modules:
 
 import app  # noqa: E402
 
-
 # ── load_history ──────────────────────────────────────────
 
 

@@ -5,11 +5,9 @@ get_service_info / get_running_tasks / health_check の
 境界値・フィールド変換・エラーハンドリングを検証する。
 """
 
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import patch
 
 import pytest
-from botocore.exceptions import ClientError
-
 
 # ── get_service_info ──────────────────────────────────────
 
