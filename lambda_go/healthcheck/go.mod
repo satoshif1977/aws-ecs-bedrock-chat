@@ -1,6 +1,6 @@
 module github.com/satoshif1977/aws-ecs-bedrock-chat/lambda_go/healthcheck
 
-go 1.24
+go 1.26
 
 require (
 	github.com/aws/aws-lambda-go v1.47.0
