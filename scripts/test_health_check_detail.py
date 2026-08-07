@@ -292,3 +292,230 @@ class TestHealthCheckDetail:
 
         result = health_check("cluster", "service")
         assert result is True
+
+
+# ── get_service_info 追加エッジケース ──────────────────────
+
+
+class TestGetServiceInfoAdditional:
+    @patch("health_check.ecs")
+    def test_複数サービスが返されたとき最初のみ使用する(self, mock_ecs):
+        mock_ecs.describe_services.return_value = {
+            "services": [
+                {
+                    "serviceName": "first-service",
+                    "status": "ACTIVE",
+                    "desiredCount": 1,
+                    "runningCount": 1,
+                    "pendingCount": 0,
+                    "taskDefinition": "arn:aws:ecs:r:id:task-definition/td:1",
+                    "launchType": "FARGATE",
+                },
+                {
+                    "serviceName": "second-service",
+                    "status": "ACTIVE",
+                    "desiredCount": 1,
+                    "runningCount": 1,
+                    "pendingCount": 0,
+                    "taskDefinition": "arn:aws:ecs:r:id:task-definition/td:2",
+                },
+            ]
+        }
+
+        from health_check import get_service_info
+
+        info = get_service_info("cluster", "first-service")
+        assert info["serviceName"] == "first-service"
+
+    @patch("health_check.ecs")
+    def test_statusフィールドが返される(self, mock_ecs):
+        mock_ecs.describe_services.return_value = {
+            "services": [
+                {
+                    "serviceName": "svc",
+                    "status": "DRAINING",
+                    "desiredCount": 1,
+                    "runningCount": 0,
+                    "pendingCount": 0,
+                    "taskDefinition": "arn:aws:ecs:r:id:task-definition/td:1",
+                    "launchType": "FARGATE",
+                }
+            ]
+        }
+
+        from health_check import get_service_info
+
+        info = get_service_info("cluster", "svc")
+        assert info["status"] == "DRAINING"
+
+    @patch("health_check.ecs")
+    def test_desiredCountとrunningCountが正しく返される(self, mock_ecs):
+        mock_ecs.describe_services.return_value = {
+            "services": [
+                {
+                    "serviceName": "svc",
+                    "status": "ACTIVE",
+                    "desiredCount": 3,
+                    "runningCount": 2,
+                    "pendingCount": 1,
+                    "taskDefinition": "arn:aws:ecs:r:id:task-definition/td:1",
+                }
+            ]
+        }
+
+        from health_check import get_service_info
+
+        info = get_service_info("cluster", "svc")
+        assert info["desiredCount"] == 3
+        assert info["runningCount"] == 2
+        assert info["pendingCount"] == 1
+
+
+# ── get_running_tasks 追加エッジケース ────────────────────
+
+
+class TestGetRunningTasksAdditional:
+    @patch("health_check.ecs")
+    def test_複数タスクが全件返される(self, mock_ecs):
+        mock_ecs.list_tasks.return_value = {
+            "taskArns": [
+                "arn:aws:ecs:r:id:task/c/task1",
+                "arn:aws:ecs:r:id:task/c/task2",
+            ]
+        }
+        mock_ecs.describe_tasks.return_value = {
+            "tasks": [
+                {
+                    "taskArn": "arn:aws:ecs:r:id:task/c/task1",
+                    "lastStatus": "RUNNING",
+                    "containers": [],
+                },
+                {
+                    "taskArn": "arn:aws:ecs:r:id:task/c/task2",
+                    "lastStatus": "RUNNING",
+                    "containers": [],
+                },
+            ]
+        }
+
+        from health_check import get_running_tasks
+
+        result = get_running_tasks("cluster", "service")
+        assert len(result) == 2
+        assert result[0]["taskId"] == "task1"
+        assert result[1]["taskId"] == "task2"
+
+    @patch("health_check.ecs")
+    def test_describe_tasksにtaskArnsが渡される(self, mock_ecs):
+        arns = ["arn:aws:ecs:r:id:task/c/task1"]
+        mock_ecs.list_tasks.return_value = {"taskArns": arns}
+        mock_ecs.describe_tasks.return_value = {
+            "tasks": [
+                {
+                    "taskArn": arns[0],
+                    "lastStatus": "RUNNING",
+                    "containers": [],
+                }
+            ]
+        }
+
+        from health_check import get_running_tasks
+
+        get_running_tasks("cluster", "service")
+        mock_ecs.describe_tasks.assert_called_once_with(cluster="cluster", tasks=arns)
+
+    @patch("health_check.ecs")
+    def test_タスクレベルのhealthStatusがない場合UNKNOWN(self, mock_ecs):
+        mock_ecs.list_tasks.return_value = {
+            "taskArns": ["arn:aws:ecs:r:id:task/c/task1"]
+        }
+        mock_ecs.describe_tasks.return_value = {
+            "tasks": [
+                {
+                    "taskArn": "arn:aws:ecs:r:id:task/c/task1",
+                    "lastStatus": "RUNNING",
+                    # healthStatus なし（タスクレベル）
+                    "containers": [],
+                }
+            ]
+        }
+
+        from health_check import get_running_tasks
+
+        result = get_running_tasks("cluster", "service")
+        assert result[0]["healthStatus"] == "UNKNOWN"
+
+
+# ── health_check 追加エッジケース ─────────────────────────
+
+
+class TestHealthCheckAdditional:
+    def _normal_service(self):
+        return {
+            "serviceName": "svc",
+            "status": "ACTIVE",
+            "desiredCount": 1,
+            "runningCount": 1,
+            "pendingCount": 0,
+            "taskDefinition": "td:1",
+            "launchType": "FARGATE",
+        }
+
+    def _running_task(self):
+        return {
+            "taskId": "abc123",
+            "lastStatus": "RUNNING",
+            "healthStatus": "HEALTHY",
+            "startedAt": "2026-07-21 10:00:00",
+            "containers": [{"name": "app", "lastStatus": "RUNNING"}],
+        }
+
+    def test_get_running_tasksがClientErrorのときFalseを返す(self):
+        import health_check as hc_mod
+        from unittest.mock import patch as mpatch
+
+        # health_check.py の except ClientError が確実に機能するよう
+        # ClientError クラスごと差し替えて一致させる
+        class _FakeError(Exception):
+            def __init__(self, error_response, operation_name):
+                self.response = error_response
+                super().__init__(f"{operation_name}: {error_response}")
+
+        with mpatch.object(hc_mod, "ClientError", _FakeError), mpatch.object(
+            hc_mod, "get_service_info"
+        ) as mock_info, mpatch.object(hc_mod, "get_running_tasks") as mock_tasks:
+            mock_info.return_value = self._normal_service()
+            mock_tasks.side_effect = _FakeError(
+                {"Error": {"Code": "ClusterNotFoundException"}}, "ListTasks"
+            )
+            result = hc_mod.health_check("cluster", "service")
+        assert result is False
+
+    @patch("health_check.get_running_tasks")
+    @patch("health_check.get_service_info")
+    def test_DRAININGステータスでFalseを返す(self, mock_info, mock_tasks):
+        from health_check import health_check
+
+        svc = self._normal_service()
+        svc["status"] = "DRAINING"
+        mock_info.return_value = svc
+        mock_tasks.return_value = [self._running_task()]
+        result = health_check("cluster", "service")
+        assert result is False
+
+    @patch("health_check.get_running_tasks")
+    @patch("health_check.get_service_info")
+    def test_複数タスクの一部がSTOPPEDのときFalseを返す(
+        self, mock_info, mock_tasks
+    ):
+        from health_check import health_check
+
+        svc = self._normal_service()
+        svc["desiredCount"] = 2
+        svc["runningCount"] = 2
+        mock_info.return_value = svc
+        stopped_task = self._running_task()
+        stopped_task["lastStatus"] = "STOPPED"
+        mock_tasks.return_value = [self._running_task(), stopped_task]
+        result = health_check("cluster", "service")
+        assert result is False
