@@ -471,8 +471,9 @@ class TestHealthCheckAdditional:
         }
 
     def test_get_running_tasksがClientErrorのときFalseを返す(self):
-        import health_check as hc_mod
         from unittest.mock import patch as mpatch
+
+        import health_check as hc_mod
 
         # health_check.py の except ClientError が確実に機能するよう
         # ClientError クラスごと差し替えて一致させる
