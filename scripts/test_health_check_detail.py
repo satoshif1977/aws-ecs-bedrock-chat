@@ -506,9 +506,7 @@ class TestHealthCheckAdditional:
 
     @patch("health_check.get_running_tasks")
     @patch("health_check.get_service_info")
-    def test_複数タスクの一部がSTOPPEDのときFalseを返す(
-        self, mock_info, mock_tasks
-    ):
+    def test_複数タスクの一部がSTOPPEDのときFalseを返す(self, mock_info, mock_tasks):
         from health_check import health_check
 
         svc = self._normal_service()
