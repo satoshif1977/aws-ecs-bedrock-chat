@@ -9,34 +9,11 @@
  *   AWS_REGION    - AWS リージョン（デフォルト: ap-northeast-1）
  */
 
-import { SNSClient, PublishCommand, PublishCommandOutput } from "@aws-sdk/client-sns";
+import { SNSClient, PublishCommand } from "@aws-sdk/client-sns";
+import type { EcsTaskDetail, EventBridgeEcsEvent, NotificationResult, SnsPublisher } from "./types";
 
-// ── 型定義 ────────────────────────────────────────────────────────────────────
-
-export interface EcsTaskDetail {
-  clusterArn: string;
-  taskArn: string;
-  lastStatus: string;
-  desiredStatus: string;
-  stoppedReason?: string;
-  group?: string;
-}
-
-export interface EventBridgeEcsEvent {
-  source: string;
-  "detail-type": string;
-  detail: EcsTaskDetail;
-}
-
-export interface NotificationResult {
-  status: "published" | "skipped";
-  messageId?: string;
-}
-
-/** SNS クライアントのインターフェース（テスト時にモックを注入できるよう分離）。 */
-export interface SnsPublisher {
-  send: (command: PublishCommand) => Promise<PublishCommandOutput>;
-}
+// 型を re-export（テストファイルが "./index" から import しているため）
+export type { EcsTaskDetail, EventBridgeEcsEvent, NotificationResult, SnsPublisher };
 
 // ── ヘルパー関数 ──────────────────────────────────────────────────────────────
 
