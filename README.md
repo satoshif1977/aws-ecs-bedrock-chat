@@ -122,6 +122,7 @@ AWS 認定バッジ画像を Claude Haiku 4.5 がマルチモーダル API で�
 aws-ecs-bedrock-chat/
 ├── app/
 │   ├── app.py               # Streamlit チャットアプリ
+│   ├── retry.py             # AWS API リトライ（指数バックオフ + フルジッター）
 │   └── requirements.txt
 ├── Dockerfile
 ├── .dockerignore
@@ -270,6 +271,11 @@ terraform destroy
 - `terraform destroy` で全リソースをクリーンアップ可能
 - **RAG（Retrieval-Augmented Generation）**：S3 にドキュメントを置くだけで Knowledge Base が自動インデックス化。`RetrieveAndGenerate` API でドキュメント検索＋回答生成を1回の API コールで実現
 - RAG 用モデルと通常チャット用モデルを使い分け：`RetrieveAndGenerate` は推論プロファイル非対応のため Claude 3 Haiku（基盤モデル直接指定）を使用
+- **スロットリング耐性**：Bedrock / DynamoDB への呼び出しを `app/retry.py` の共通リトライで包む
+  - AWS 公式推奨の**指数バックオフ + フルジッター**（`base * 2^(n-1)` を上限でクランプし、0〜その値に散らす）。同時に失敗した複数クライアントがリトライで再衝突する thundering herd を防ぐ
+  - `ThrottlingException` / `ModelNotReadyException` / 429・5xx / 接続タイムアウトのみ再試行し、`ValidationException` や `AccessDeniedException` は**時間をおいても直らないため即座に諦める**
+  - 失敗時は**元の例外をそのまま再送出**する（独自例外でラップすると呼び出し側の `except ClientError` が壊れるため）
+  - `sleep` / `rand` を注入可能にしてあり、テストは**実待機ゼロ・決定的**に実行できる
 
 ---
 

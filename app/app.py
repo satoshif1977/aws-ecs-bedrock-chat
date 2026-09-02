@@ -7,6 +7,7 @@ import uuid
 
 import boto3
 import streamlit as st
+from retry import RetryConfig, retry_call
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.WARNING)
@@ -38,6 +39,23 @@ EXT_TO_MEDIA_TYPE: dict[str, str] = {
 }
 
 
+# ── リトライ設定 ──────────────────────────────────────────
+# Bedrock のスロットリングや DynamoDB の一時的なエラーに対する再試行設定。
+# 指数バックオフ + フルジッターで最大 3 回まで試行する。
+# テストからは RETRY_SLEEP を差し替えることで実待機なしに検証できる。
+RETRY_CONFIG = RetryConfig(max_attempts=3, base_delay=0.5, max_delay=8.0)
+RETRY_SLEEP = time.sleep
+
+
+def call_aws(func, *args, **kwargs):
+    """AWS API 呼び出しを共通のリトライ設定で実行する。
+
+    リトライ不能なエラーと、試行回数を使い切った場合の失敗は、
+    元の例外をそのまま送出する（呼び出し側の例外処理を変えないため）。
+    """
+    return retry_call(func, *args, config=RETRY_CONFIG, sleep=RETRY_SLEEP, **kwargs)
+
+
 # ── AWS クライアント（キャッシュ）────────────────────────
 @st.cache_resource
 def get_bedrock_client():
@@ -60,7 +78,8 @@ def load_history(session_id: str) -> list[dict]:
     if not TABLE_NAME:
         return []
     try:
-        response = get_dynamodb_client().get_item(
+        response = call_aws(
+            get_dynamodb_client().get_item,
             TableName=TABLE_NAME,
             Key={"session_id": {"S": session_id}},
         )
@@ -78,7 +97,8 @@ def save_history(session_id: str, messages: list[dict]) -> None:
         return
     try:
         ttl = int(time.time()) + 60 * 60 * 24 * HISTORY_TTL_DAYS
-        get_dynamodb_client().put_item(
+        call_aws(
+            get_dynamodb_client().put_item,
             TableName=TABLE_NAME,
             Item={
                 "session_id": {"S": session_id},
@@ -93,7 +113,8 @@ def save_history(session_id: str, messages: list[dict]) -> None:
 # ── Knowledge Base RAG 回答生成 ───────────────────────────
 def invoke_rag(query: str) -> tuple[str, list[str]]:
     """Knowledge Base に問い合わせて RAG 回答と引用元を返す。"""
-    response = get_bedrock_agent_runtime_client().retrieve_and_generate(
+    response = call_aws(
+        get_bedrock_agent_runtime_client().retrieve_and_generate,
         input={"text": query},
         retrieveAndGenerateConfiguration={
             "type": "KNOWLEDGE_BASE",
@@ -120,7 +141,8 @@ def invoke_bedrock_stream(messages: list[dict]):
         "max_tokens": MAX_TOKENS,
         "messages": messages,
     }
-    response = get_bedrock_client().invoke_model_with_response_stream(
+    response = call_aws(
+        get_bedrock_client().invoke_model_with_response_stream,
         modelId=MODEL_ID,
         body=json.dumps(body),
     )
