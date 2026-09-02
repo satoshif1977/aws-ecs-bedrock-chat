@@ -67,6 +67,7 @@ class TestDefaults:
 
 
 class TestLoadHistoryRobust:
+    @patch("app.RETRY_SLEEP", lambda _seconds: None)
     @patch("app.get_dynamodb_client")
     @patch("app.TABLE_NAME", "test-table")
     def test_ClientError_ThrottleExceptionで空リストを返す(self, mock_get_client):
@@ -79,6 +80,8 @@ class TestLoadHistoryRobust:
 
         result = app.load_history("throttled-session")
         assert result == []
+        # スロットリングはリトライ対象。使い切ったうえで握りつぶされる
+        assert mock_client.get_item.call_count == app.RETRY_CONFIG.max_attempts
 
     @patch("app.get_dynamodb_client")
     @patch("app.TABLE_NAME", "test-table")
@@ -92,6 +95,8 @@ class TestLoadHistoryRobust:
 
         result = app.load_history("denied-session")
         assert result == []
+        # 権限エラーは時間をおいても直らないため、リトライせず 1 回で諦める
+        assert mock_client.get_item.call_count == 1
 
     @patch("app.get_dynamodb_client")
     @patch("app.TABLE_NAME", "test-table")
@@ -134,6 +139,7 @@ class TestLoadHistoryRobust:
 
 
 class TestSaveHistoryRobust:
+    @patch("app.RETRY_SLEEP", lambda _seconds: None)
     @patch("app.get_dynamodb_client")
     @patch("app.TABLE_NAME", "test-table")
     def test_ClientError_ThrottleExceptionが伝播しない(self, mock_get_client):
@@ -145,6 +151,7 @@ class TestSaveHistoryRobust:
         mock_get_client.return_value = mock_client
 
         app.save_history("s", [{"role": "user", "content": "test"}])
+        assert mock_client.put_item.call_count == app.RETRY_CONFIG.max_attempts
 
     @patch("app.get_dynamodb_client")
     @patch("app.TABLE_NAME", "test-table")
