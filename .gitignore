@@ -26,3 +26,7 @@ __pycache__/
 node_modules/
 dist/
 coverage/
+
+# Go ビルド成果物（go build の出力）
+*.exe
+lambda_go/*/healthcheck
