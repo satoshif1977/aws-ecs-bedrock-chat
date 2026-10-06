@@ -357,3 +357,43 @@ export function formatErrors(errors: ValidationError[]): string {
     .map((e) => `[${e.severity.toUpperCase()}] ${e.field}: ${e.message}`)
     .join("\n");
 }
+
+// ── 通知可否の判定 ────────────────────────────────────────────
+
+/**
+ * 通知本文の組み立てに必須のフィールド。
+ *
+ * helpers.ts の formatMessage は detail.taskArn / clusterArn を
+ * そのまま split() するため、欠けていると TypeError でハンドラーごと落ちる。
+ */
+export const REQUIRED_DETAIL_FIELDS = [
+  "clusterArn",
+  "taskArn",
+  "lastStatus",
+] as const;
+
+/**
+ * 通知を組み立てられないほど壊れているかを判定する。
+ *
+ * フォーマット不正（ARN の形・ステータス遷移など）では true を返さない。
+ * 通知 Lambda にとっては「通知が出ないこと」のほうが重大なため、
+ * 本文を作れずに落ちるケースだけを止め、それ以外は警告を残して通知する。
+ */
+export function isUnprocessable(event: EcsEventInput): boolean {
+  if (!event?.detail) return true;
+  const detail = event.detail;
+  return REQUIRED_DETAIL_FIELDS.some((field) => !detail[field]);
+}
+
+/**
+ * 通知を止めた理由として記録する、欠落フィールドの一覧を返す。
+ *
+ * detail ごと無い場合は "detail" を返す。
+ */
+export function missingRequiredFields(event: EcsEventInput): string[] {
+  if (!event?.detail) return ["detail"];
+  const detail = event.detail;
+  return REQUIRED_DETAIL_FIELDS.filter((field) => !detail[field]).map(
+    (field) => `detail.${field}`
+  );
+}

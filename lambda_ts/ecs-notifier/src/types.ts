@@ -28,6 +28,8 @@ export interface EventBridgeEcsEvent {
 export interface NotificationResult {
   status: "published" | "skipped";
   messageId?: string;
+  /** skipped のときの理由。検証で弾いた場合に入る（通常の送信では未設定） */
+  reason?: string;
 }
 
 // ── DI 用インターフェース ────────────────────────────────────────────────────
