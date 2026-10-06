@@ -143,9 +143,12 @@ aws-ecs-bedrock-chat/
 │   └── knowledgebase/       # Bedrock Knowledge Base / OpenSearch Serverless / S3
 ├── lambda_ts/
 │   └── ecs-notifier/        # TypeScript Lambda: ECS タスク状態変更 → SNS 通知
-│       ├── src/index.ts     # ハンドラー（EventBridge → SNS publishNotification）
-│       ├── src/index.test.ts# Jest テスト 23 件（カバレッジ 100%）
-│       └── package.json
+│       ├── src/index.ts     # ハンドラー（検証 → フォーマット → SNS publish）
+│       ├── src/validators.ts# イベント検証（純粋関数・AWS SDK 非依存）
+│       ├── src/helpers.ts   # メッセージ生成・SNS 送信（retry 経由）
+│       ├── src/retry.ts     # 指数バックオフ + フルジッター
+│       ├── src/logger.ts    # 機密情報マスキング付き構造化ロガー
+│       └── package.json     # Jest テスト 499 件
 ├── lambda_go/
 │   └── healthcheck/         # Go Lambda: ECS / ALB / DynamoDB ヘルスチェック
 │       ├── main.go          # Checker 構造体（interface モック対応）
@@ -342,11 +345,45 @@ GitHub Actions で Python Lint・テスト・Docker ビルド・Terraform 静的
 
 ### 実施内容
 
+## ECS 通知 Lambda の入力検証
+
+EventBridge から届くイベントは**型どおりとは限らない**。`index.ts` は SNS へ送る前に
+`validators.ts` で検証し、**壊れ方に応じて扱いを変える**。
+
+| 壊れ方 | 扱い | 理由 |
+|---|---|---|
+| **必須フィールドの欠落**（`detail` / `clusterArn` / `taskArn` / `lastStatus`） | **通知せず `skipped`**・`error` ログ | 本文を組み立てられない。進めると `formatMessage` が `TypeError` で落ち、EventBridge が同じイベントを再試行し続ける |
+| フォーマット不正（ARN の形・未知のステータス・`source` 違い） | **通知する**・`warn` ログ | 通知 Lambda にとっては「**通知が出ないこと**」のほうが重大 |
+| 警告レベル（不正な遷移・`STOPPED` なのに `stoppedReason` なし） | **通知する**・`warn` ログ | 運用上の気付きとして残すだけでよい |
+
+★ **「検証に失敗したら止める」を一律に適用していない。** 通知が出ないと障害に気づけないため、
+**落ちて通知できないケースだけ**を止めている。
+
+```ts
+if (isUnprocessable(input)) {
+  const missing = missingRequiredFields(input);
+  log.error("必須フィールドが欠けているため通知できません", { missingFields: missing });
+  return { status: "skipped", reason: `必須フィールドの欠落: ${missing.join(", ")}` };
+}
+
+const problems = validateEcsEvent(input);
+if (problems.length > 0) {
+  // 通知は止めない
+  log.warn("イベントに想定外の内容が含まれています", { problemCount: problems.length, ... });
+}
+```
+
+★ この結線は `index.validation.test.ts` が固定している。
+**ユーティリティを置いただけで呼び出し元から呼んでいない**という欠陥は
+`validators.test.ts` が単体で通るため**カバレッジでは検出できない**。
+
+---
+
 | ジョブ | ワークフロー | 内容 |
 |---|---|---|
 | ruff / black | deploy.yml | Python コードの構文・フォーマットチェック |
 | Go ユニットテスト | go-test.yml | lambda_go/healthcheck 14 件（AWS 接続不要） |
-| TypeScript 型チェック + Jest | ts-test.yml | tsc --noEmit + lambda_ts/ecs-notifier 23 件（AWS 接続不要） |
+| TypeScript 型チェック + Jest | ts-test.yml | tsc --noEmit + lambda_ts/ecs-notifier 499 件（AWS 接続不要） |
 | Docker Build | deploy.yml | Dockerfile の正常ビルド確認 |
 | terraform fmt / validate | deploy.yml | Terraform フォーマット・構文チェック |
 | Checkov セキュリティスキャン | deploy.yml | IaC のセキュリティポリシー違反を検出（soft_fail: false） |
