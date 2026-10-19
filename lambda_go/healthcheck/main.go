@@ -107,6 +107,32 @@ type Checker struct {
 	ecsCli  ECSClient
 	elbv2   ELBV2Client
 	dynoCli DynamoDBClient
+
+	// retrier は AWS API 呼び出しのリトライ設定。
+	// ゼロ値のままでも retryFor() が既定値へ補正するため、
+	// 設定を省いて組み立てたインスタンスでもリトライは有効になる。
+	retrier Retrier
+
+	// newRetryHook は操作名ごとにリトライフックを生成する。
+	// RetryLogHook / RetryMetricsHook は操作名を生成時に受け取る設計のため、
+	// 呼び出しごとに作り直す必要がある。nil なら retrier.OnRetry をそのまま使う。
+	newRetryHook func(op string) RetryHook
+}
+
+// retryFor は指定した操作名に対応する Retrier を返す。
+//
+// 設定が未初期化（ゼロ値）の場合は既定値へ補正する。
+// これにより &Checker{ecsCli: ...} のように設定を省いて生成しても、
+// リトライが「設定不正」で即エラーになることがない。
+func (c *Checker) retryFor(op string) Retrier {
+	r := c.retrier
+	if err := r.Config.Validate(); err != nil {
+		r.Config = DefaultRetryConfig()
+	}
+	if c.newRetryHook != nil {
+		r.OnRetry = c.newRetryHook(op)
+	}
+	return r
 }
 
 // CheckECS は指定したクラスター・サービスのヘルス状態を返す。
@@ -115,10 +141,13 @@ func (c *Checker) CheckECS(ctx context.Context, clusterName, serviceName string)
 	if clusterName == "" || serviceName == "" {
 		return nil, nil
 	}
-	out, err := c.ecsCli.DescribeServices(ctx, &ecs.DescribeServicesInput{
-		Cluster:  aws.String(clusterName),
-		Services: []string{serviceName},
-	})
+	out, err := RetryValue(ctx, c.retryFor("DescribeServices"), "DescribeServices",
+		func(ctx context.Context) (*ecs.DescribeServicesOutput, error) {
+			return c.ecsCli.DescribeServices(ctx, &ecs.DescribeServicesInput{
+				Cluster:  aws.String(clusterName),
+				Services: []string{serviceName},
+			})
+		})
 	if err != nil {
 		return nil, fmt.Errorf("ECS DescribeServices: %w", err)
 	}
@@ -151,9 +180,12 @@ func (c *Checker) CheckALB(ctx context.Context, targetGroupARN string) (*ALBHeal
 	if targetGroupARN == "" {
 		return nil, nil
 	}
-	out, err := c.elbv2.DescribeTargetHealth(ctx, &elasticloadbalancingv2.DescribeTargetHealthInput{
-		TargetGroupArn: aws.String(targetGroupARN),
-	})
+	out, err := RetryValue(ctx, c.retryFor("DescribeTargetHealth"), "DescribeTargetHealth",
+		func(ctx context.Context) (*elasticloadbalancingv2.DescribeTargetHealthOutput, error) {
+			return c.elbv2.DescribeTargetHealth(ctx, &elasticloadbalancingv2.DescribeTargetHealthInput{
+				TargetGroupArn: aws.String(targetGroupARN),
+			})
+		})
 	if err != nil {
 		return nil, fmt.Errorf("ALB DescribeTargetHealth: %w", err)
 	}
@@ -190,9 +222,12 @@ func (c *Checker) CheckDynamoDB(ctx context.Context, tableName string) (*DynamoD
 	if tableName == "" {
 		return nil, nil
 	}
-	out, err := c.dynoCli.DescribeTable(ctx, &dynamodb.DescribeTableInput{
-		TableName: aws.String(tableName),
-	})
+	out, err := RetryValue(ctx, c.retryFor("DescribeTable"), "DescribeTable",
+		func(ctx context.Context) (*dynamodb.DescribeTableOutput, error) {
+			return c.dynoCli.DescribeTable(ctx, &dynamodb.DescribeTableInput{
+				TableName: aws.String(tableName),
+			})
+		})
 	if err != nil {
 		return nil, fmt.Errorf("DynamoDB DescribeTable: %w", err)
 	}
@@ -339,6 +374,22 @@ func runHealthCheck(
 	return summary
 }
 
+// newRetryHookFactory はリトライ発生時にログとメトリクスの両方へ記録する
+// フックの生成器を返す。
+//
+// RetryLogHook / RetryMetricsHook は操作名を生成時に受け取る設計のため、
+// 呼び出しごとにフックを作り直せるよう「操作名 → フック」の関数として返す。
+// metrics が nil（初期化に失敗した場合）はログだけに絞る。
+func newRetryHookFactory(logger *slog.Logger, metrics *Metrics) func(op string) RetryHook {
+	return func(op string) RetryHook {
+		hooks := []RetryHook{RetryLogHook(logger, op)}
+		if metrics != nil {
+			hooks = append(hooks, RetryMetricsHook(metrics, op))
+		}
+		return CombineRetryHooks(hooks...)
+	}
+}
+
 // ── Lambda ハンドラー ────────────────────────────────────────────────────────
 
 func handler(ctx context.Context, _ json.RawMessage) (*HealthSummary, error) {
@@ -363,9 +414,11 @@ func handler(ctx context.Context, _ json.RawMessage) (*HealthSummary, error) {
 	}
 
 	checker := &Checker{
-		ecsCli:  ecs.NewFromConfig(cfg),
-		elbv2:   elasticloadbalancingv2.NewFromConfig(cfg),
-		dynoCli: dynamodb.NewFromConfig(cfg),
+		ecsCli:       ecs.NewFromConfig(cfg),
+		elbv2:        elasticloadbalancingv2.NewFromConfig(cfg),
+		dynoCli:      dynamodb.NewFromConfig(cfg),
+		retrier:      NewRetrier(),
+		newRetryHook: newRetryHookFactory(logger, metrics),
 	}
 
 	summary := runHealthCheck(ctx, checker, logger, metrics, loadCheckConfig())
