@@ -382,7 +382,7 @@ if (problems.length > 0) {
 | ジョブ | ワークフロー | 内容 |
 |---|---|---|
 | ruff / black | deploy.yml | Python コードの構文・フォーマットチェック |
-| Go ユニットテスト | go-test.yml | lambda_go/healthcheck 14 件（AWS 接続不要） |
+| Go ユニットテスト | go-test.yml | lambda_go/healthcheck 342 件（AWS 接続不要） |
 | TypeScript 型チェック + Jest | ts-test.yml | tsc --noEmit + lambda_ts/ecs-notifier 499 件（AWS 接続不要） |
 | Docker Build | deploy.yml | Dockerfile の正常ビルド確認 |
 | terraform fmt / validate | deploy.yml | Terraform フォーマット・構文チェック |

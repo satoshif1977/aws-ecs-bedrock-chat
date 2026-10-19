@@ -9,6 +9,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.59.0
 	github.com/aws/aws-sdk-go-v2/service/ecs v1.82.4
 	github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2 v1.43.1
+	github.com/aws/smithy-go v1.27.1
 )
 
 require (
@@ -23,6 +24,5 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sso v1.24.9 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.28.8 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.33.6 // indirect
-	github.com/aws/smithy-go v1.27.1 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 )
