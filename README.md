@@ -148,7 +148,8 @@ aws-ecs-bedrock-chat/
 │       ├── src/helpers.ts   # メッセージ生成・SNS 送信（retry 経由）
 │       ├── src/retry.ts     # 指数バックオフ + フルジッター
 │       ├── src/logger.ts    # 機密情報マスキング付き構造化ロガー
-│       └── package.json     # Jest テスト 499 件
+│       ├── src/metrics.ts   # CloudWatch EMF メトリクス（PutMetricData 不要）
+│       └── package.json     # Jest テスト 586 件
 ├── lambda_go/
 │   └── healthcheck/         # Go Lambda: ECS / ALB / DynamoDB ヘルスチェック
 │       ├── main.go          # Checker 構造体（interface モック対応）
@@ -383,7 +384,7 @@ if (problems.length > 0) {
 |---|---|---|
 | ruff / black | deploy.yml | Python コードの構文・フォーマットチェック |
 | Go ユニットテスト | go-test.yml | lambda_go/healthcheck 342 件（AWS 接続不要） |
-| TypeScript 型チェック + Jest | ts-test.yml | tsc --noEmit + lambda_ts/ecs-notifier 499 件（AWS 接続不要） |
+| TypeScript 型チェック + Jest | ts-test.yml | tsc --noEmit + lambda_ts/ecs-notifier 586 件（AWS 接続不要） |
 | Docker Build | deploy.yml | Dockerfile の正常ビルド確認 |
 | terraform fmt / validate | deploy.yml | Terraform フォーマット・構文チェック |
 | Checkov セキュリティスキャン | deploy.yml | IaC のセキュリティポリシー違反を検出（soft_fail: false） |
