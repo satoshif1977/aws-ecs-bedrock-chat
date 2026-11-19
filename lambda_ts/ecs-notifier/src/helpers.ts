@@ -10,6 +10,8 @@ import { withRetry } from "./retry";
 import type { RetryOptions } from "./retry";
 import { createLogger, retryLogger } from "./logger";
 import type { Logger } from "./logger";
+import { retryMetrics } from "./metrics";
+import type { Metrics } from "./metrics";
 
 /** publishNotification の差し替え用オプション（テストから注入する） */
 export interface PublishOptions {
@@ -17,7 +19,17 @@ export interface PublishOptions {
   logger?: Logger;
   /** リトライの設定・待機関数・乱数などを差し替える */
   retry?: Omit<RetryOptions, "onRetry">;
+  /**
+   * メトリクスの記録先。省略時は記録しない。
+   * ロガーと違って既定値を作らない。EMF は 1 回の呼び出しで 1 ドキュメントを
+   * flush する形なので、ここで勝手に作ると呼び出しごとに別文書が出てしまう。
+   * 生成と flush は呼び出し側（index.ts）に持たせる。
+   */
+  metrics?: Metrics;
 }
+
+/** onRetry に渡せるフックの型（retry.ts の RetryOptions と揃える） */
+type RetryHook = (attempt: number, delayMs: number, error: unknown) => void;
 
 // ── 文字列ヘルパー ──────────────────────────────────────────────────────────────
 
@@ -85,6 +97,7 @@ export async function publishNotification(
 ): Promise<NotificationResult> {
   const logger =
     options.logger ?? createLogger().child({ component: "ecs-notifier" });
+  const { metrics } = options;
 
   const publishWithRetry = withRetry(
     () =>
@@ -93,18 +106,78 @@ export async function publishNotification(
       ),
     {
       ...options.retry,
-      onRetry: retryLogger(logger, RETRY_OPERATION),
+      // ログとメトリクスの両方に同じリトライを伝える。onRetry は 1 つしか
+      // 渡せないため、ここで合成する。
+      onRetry: combineRetryHooks(
+        retryLogger(logger, RETRY_OPERATION),
+        metrics && retryMetrics(metrics, RETRY_OPERATION)
+      ),
     }
   );
 
-  const output = await publishWithRetry();
+  // 計測はリトライを含めた「通知が出るまで」。待たされた分を見たいため。
+  const stopTimer = metrics?.timer("PublishLatency");
 
-  logger.info("通知を送信しました", {
-    operation: RETRY_OPERATION,
-    topicArn,
-    subject,
-    messageId: output.MessageId,
-  });
+  try {
+    const output = await publishWithRetry();
 
-  return { status: "published", messageId: output.MessageId };
+    recordMetrics(() => {
+      stopTimer?.();
+      metrics?.count("NotificationSuccess");
+    });
+
+    logger.info("通知を送信しました", {
+      operation: RETRY_OPERATION,
+      topicArn,
+      subject,
+      messageId: output.MessageId,
+    });
+
+    return { status: "published", messageId: output.MessageId };
+  } catch (error) {
+    recordMetrics(() => {
+      stopTimer?.();
+      metrics?.count("NotificationError");
+    });
+    // 通知の失敗は呼び出し側に伝える。メトリクスに出したことで
+    // 握りつぶしてよい話にはならない。
+    throw error;
+  }
+}
+
+// ── メトリクス結線の補助 ──────────────────────────────────────────────────────
+
+/**
+ * 複数のリトライフックを 1 つにまとめる。undefined は無視する。
+ *
+ * 片方が投げてももう片方は呼ぶ。ログが落ちたせいでメトリクスまで
+ * 欠けると、障害時に手がかりが両方なくなる。
+ */
+function combineRetryHooks(...hooks: (RetryHook | undefined | false)[]): RetryHook {
+  const active = hooks.filter((h): h is RetryHook => typeof h === "function");
+  return (attempt, delayMs, error) => {
+    for (const hook of active) {
+      try {
+        hook(attempt, delayMs, error);
+      } catch {
+        // 記録できないこと自体は通知の失敗ではない
+      }
+    }
+  };
+}
+
+/**
+ * メトリクスの記録を行う。失敗しても通知を落とさない。
+ *
+ * metrics.ts は設定ミス（不正な単位・名前の長さ超過など）を例外にする。
+ * CloudWatch が不正な EMF を黙って破棄するため、モジュール単体では
+ * 大きな声で失敗させたい。ただし通知 Lambda の仕事は通知であって、
+ * 計測の失敗で通知を落とすのは割に合わない。
+ */
+export function recordMetrics(fn: () => void): void {
+  try {
+    fn();
+  } catch {
+    // 握りつぶす
+  }
 }

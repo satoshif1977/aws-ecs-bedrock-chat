@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- `lambda_ts/ecs-notifier/src/metrics.ts`: CloudWatch EMF メトリクスユーティリティを追加
+  （`lambda_go/healthcheck/metrics.go` と出力キーを揃えた並置実装・PutMetricData を呼ばない）
+- ハンドラーと `publishNotification()` への結線:
+  `NotificationSuccess` / `NotificationError` / `PublishLatency` /
+  `EventSkipped` / `ValidationProblem` / `RetryAttempt`
+- `index.metrics.test.ts` 22 件・`metrics.test.ts` 65 件を追加（合計 499 → 586 件）
+
+### Changed
+- `PublishOptions` / `HandlerOptions` に `metrics` を追加（未指定時は既定の名前空間で生成）
+- ハンドラーの戻り値を `return await` に変更。`finally` が送信の完了を
+  待たずに flush するのを防ぐため
+
 ## [1.10.0] - 2026-07-10
 
 ### Added

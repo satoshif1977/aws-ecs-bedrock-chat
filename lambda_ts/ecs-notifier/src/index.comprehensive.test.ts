@@ -237,6 +237,26 @@ describe("createHandler / 統合テスト", () => {
   });
 });
 
+// ── console 出力の仕分け ─────────────────────────────────────────────────────
+
+/**
+ * metrics.ts（EMF）も console.log に 1 行 JSON を書く。
+ * ここで見たいのはハンドラーが出す「人が読むログ」なので、メトリクスの行は数えない。
+ * メトリクス側の結線は index.metrics.test.ts で見る。
+ */
+function isMetricsLine(line: unknown): boolean {
+  try {
+    return "_aws" in (JSON.parse(String(line)) as Record<string, unknown>);
+  } catch {
+    return false;
+  }
+}
+
+/** console スパイの呼び出しから EMF の行を除いたものを返す */
+function nonMetricsCalls(spy: jest.SpyInstance): unknown[][] {
+  return spy.mock.calls.filter((call) => !isMetricsLine(call[0]));
+}
+
 // ── createHandler / console 出力検証 ─────────────────────────────────────────
 
 describe("createHandler / console 出力", () => {
@@ -266,7 +286,8 @@ describe("createHandler / console 出力", () => {
     await h(makeEvent());
 
     expect(warnSpy).toHaveBeenCalled();
-    expect(logSpy).not.toHaveBeenCalled();
+    // EMF の行は出てよい（メトリクスはログではない）。人が読むログが無いことを見る。
+    expect(nonMetricsCalls(logSpy)).toHaveLength(0);
     logSpy.mockRestore();
     warnSpy.mockRestore();
   });
